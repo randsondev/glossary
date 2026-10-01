@@ -35,7 +35,7 @@ function collectSkills(roots) {
   for (const root of roots) {
     for (const skill of listSkills(root.dir)) {
       if (byName.has(skill.name)) dupes.push(`${skill.name}: ${root.label} e ${byName.get(skill.name).root}`);
-      else byName.set(skill.name, { ...skill, root: root.label });
+      else byName.set(skill.name, { ...skill, root: root.label, rootAgents: root.agents });
     }
   }
   return { byName, dupes };
@@ -79,7 +79,10 @@ export async function link({ dryRun = false, agents, noClaudeDir = false, unlink
     const dir = expandHome(t.dir);
     const exclude = new Set(t.exclude || []);
     const off = unlink || (noClaudeDir && t.dir === '~/.claude/skills');
-    const wanted = off ? new Map() : new Map([...byName].filter(([name]) => !exclude.has(name)));
+    // Raiz com "agents" no roots.json: só entra numa pasta se todos que a leem estão na lista.
+    const readers = [...t.agents, ...(t.alsoReadBy || [])];
+    const allowed = (skill) => !skill.rootAgents || readers.every((a) => skill.rootAgents.includes(a));
+    const wanted = off ? new Map() : new Map([...byName].filter(([name, skill]) => !exclude.has(name) && allowed(skill)));
     const counts = { criados: 0, atualizados: 0, removidos: 0, iguais: 0 };
     log.step(`${t.dir} (${t.agents.join(', ')})`);
     if (!fs.existsSync(dir)) {
@@ -162,10 +165,26 @@ async function ensureHermesDir({ dryRun }) {
   if (!dryRun && !(await confirm(`Gravar skills.external_dirs = ${HERMES_DIR} na config do Hermes?`))) return;
   const cfg = run(bin, ['config', 'path']).stdout.trim();
   if (cfg) backupFile(cfg, { dryRun });
-  if (dryRun) return log.dry(`hermes config set skills.external_dirs ${HERMES_DIR}`);
-  const set = run(bin, ['config', 'set', 'skills.external_dirs', HERMES_DIR]);
-  if (set.code === 0) log.ok(`skills.external_dirs = ${HERMES_DIR}`);
-  else log.err(`hermes config set falhou: ${set.stderr.trim()}`);
+  const literal = JSON.stringify([HERMES_DIR]);
+  if (dryRun) return log.dry(`hermes config set skills.external_dirs '${literal}'`);
+  // Hermes 0.21+ exige lista e aceita literal JSON; versões antigas gravam o literal como
+  // texto, mas aceitam o caminho puro. Tenta a lista, confere e cai para o texto se precisar.
+  const read = () => {
+    try {
+      return JSON.parse(run(bin, ['config', 'get', 'skills.external_dirs', '--json']).stdout.trim() || 'null');
+    } catch {
+      return null;
+    }
+  };
+  let set = run(bin, ['config', 'set', 'skills.external_dirs', literal]);
+  let value = read();
+  if (!(Array.isArray(value) && value.includes(HERMES_DIR))) {
+    set = run(bin, ['config', 'set', 'skills.external_dirs', HERMES_DIR]);
+    value = read();
+  }
+  const okValue = Array.isArray(value) ? value.includes(HERMES_DIR) : value === HERMES_DIR;
+  if (okValue) log.ok(`skills.external_dirs = ${JSON.stringify(value)}`);
+  else log.err(`hermes config set falhou: ${(set.stderr || set.stdout).trim()}`);
 }
 
 if (isMain(import.meta.url)) {

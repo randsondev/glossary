@@ -54,7 +54,11 @@ log.info(`repositório: ${tilde(REPO)}`);
 log.info(`agentes: ${agents.join(', ') || '(nenhum detectado; use --agents)'}`);
 log.info(`partes: ${only.join(', ')}`);
 const roots = extraRoots();
-if (roots.length) log.info(`raízes extras (${tilde(path.join(CONFIG_DIR, 'roots.json'))}): ${roots.map(tilde).join(', ')}`);
+if (roots.length)
+  log.info(
+    `raízes extras (${tilde(path.join(CONFIG_DIR, 'roots.json'))}): ` +
+      roots.map((r) => tilde(r.dir) + (r.agents ? ` [só ${r.agents.join(', ')}]` : '')).join(', '),
+  );
 
 const report = [];
 const record = (name, code) => (report.push([name, code]), code);
