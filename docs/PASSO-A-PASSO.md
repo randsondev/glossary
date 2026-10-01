@@ -126,7 +126,7 @@ O script:
    - `web_dashboard_open_on_launch: false`. O painel continua em `http://127.0.0.1:24282/dashboard/`, mas não abre uma aba a cada sessão.
    - `base_modes` ganha `no-memories` se você aceitar. A memória fica com o ai-memory. Para escolher sem pergunta: `--memories off` ou `--memories keep`.
    - `trusted_project_path_patterns` recebe `~/projetos/**` (outro lugar: `--trusted "<glob>"`).
-3. Registra o MCP em cada agente, com o caminho absoluto do binário. Apps de interface gráfica no macOS não herdam o `PATH` do terminal.
+3. Registra o MCP em cada agente, com o caminho absoluto do binário. Apps de interface gráfica no macOS não herdam o `PATH` do terminal. Se o agente já tiver um `serena` sem `--project-from-cwd` ou com outro contexto, o script mostra o registro atual e pergunta antes de trocar.
 
 **Linguagens**: Python, TypeScript/JavaScript, Java, Go, Rust, C#, PHP, Ruby, Kotlin e muitas outras ([lista](https://oraios.github.io/serena/01-about/020_programming-languages.html)). **Não existe language server de Apex**: num projeto Salesforce, o Serena só ajuda com o JavaScript dos LWC. Para esses projetos, fixe `typescript` (seção 6).
 
