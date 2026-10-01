@@ -40,6 +40,11 @@ function serenaArgs(agent) {
   return ['start-mcp-server', `--context=${CONTEXT[agent]}`, '--project-from-cwd'];
 }
 
+// Um registro já existente serve se tem o contexto certo e ativa o projeto pela pasta atual.
+function argsOk(args, agent) {
+  return /(^|\s)--project-from-cwd(\s|$)/.test(args) && new RegExp(`--context[ =]${CONTEXT[agent]}(\\s|$)`).test(args);
+}
+
 // ---------- binário ----------
 
 function findSerena() {
@@ -194,14 +199,30 @@ async function wireAgents(bin, agents, { dryRun }) {
       log.warn(`${agent}: CLI não encontrada; pulei`);
       continue;
     }
-    if (run(cli, ['mcp', 'get', 'serena']).code === 0) {
-      log.ok(`${agent}: serena já registrado`);
+    const cfg = path.join(HOME, agent === 'claude' ? '.claude.json' : '.openclaude.json');
+    const add = ['mcp', 'add', '--scope', 'user', 'serena', '--', bin, ...serenaArgs(agent)];
+    const got = run(cli, ['mcp', 'get', 'serena']);
+    if (got.code === 0) {
+      const args = /^\s*Args:\s*(.*)$/m.exec(got.stdout)?.[1]?.trim() || '';
+      const scope = /^\s*Scope:\s*(\w+)/m.exec(got.stdout)?.[1]?.toLowerCase() || '?';
+      if (argsOk(args, agent)) {
+        log.ok(`${agent}: serena já registrado`);
+        continue;
+      }
+      log.warn(`${agent}: serena já registrado com outros argumentos (escopo ${scope}): ${args || '(sem argumentos)'}`);
+      if (scope !== 'user') {
+        log.info(`remova com "${tilde(cli)} mcp remove serena -s ${scope}" e rode de novo`);
+        continue;
+      }
+      if (!dryRun && !(await confirm(`${agent}: trocar pelo registro do glossary (${serenaArgs(agent).join(' ')})?`))) continue;
+      backupFile(cfg, { dryRun });
+      runLive(cli, ['mcp', 'remove', '--scope', 'user', 'serena'], { dryRun });
+      runLive(cli, add, { dryRun });
       continue;
     }
-    const cfg = path.join(HOME, agent === 'claude' ? '.claude.json' : '.openclaude.json');
     if (!dryRun && !(await confirm(`${agent}: registrar o serena no escopo de usuário (${tilde(cfg)})?`))) continue;
     backupFile(cfg, { dryRun });
-    runLive(cli, ['mcp', 'add', '--scope', 'user', 'serena', '--', bin, ...serenaArgs(agent)], { dryRun });
+    runLive(cli, add, { dryRun });
   }
 
   if (agents.includes('cursor')) {
@@ -221,13 +242,24 @@ async function wireAgents(bin, agents, { dryRun }) {
 
   if (agents.includes('hermes')) {
     const hermes = which('hermes');
+    const current = hermes && run(hermes, ['config', 'get', 'mcp_servers.serena', '--json']);
+    let entry = null;
+    try {
+      entry = current?.code === 0 ? JSON.parse(current.stdout) : null;
+    } catch {}
+    const args = (entry?.args || []).join(' ');
     if (!hermes) log.warn('hermes não está no PATH; pulei');
-    else if (/\bserena\b/.test(run(hermes, ['mcp', 'list']).stdout)) log.ok('hermes: serena já registrado');
-    else if (dryRun || (await confirm('hermes: registrar o serena (hermes mcp add)?'))) {
-      backupFile(run(hermes, ['config', 'path']).stdout.trim(), { dryRun });
-      // Pergunta do Hermes: "habilitar todas as ferramentas?" (ou "salvar mesmo assim?") -> y.
-      runWithAnswers(hermes, ['mcp', 'add', 'serena', '--command', bin, '--args', ...serenaArgs('hermes')], 'y\n', { dryRun });
-      if (!dryRun) checkHermes(hermes, 'serena');
+    else if (entry && argsOk(args, 'hermes')) log.ok('hermes: serena já registrado');
+    else {
+      if (entry) log.warn(`hermes: serena já registrado com outros argumentos: ${args || '(sem argumentos)'}`);
+      const question = entry ? 'hermes: trocar pelo registro do glossary?' : 'hermes: registrar o serena (hermes mcp add)?';
+      if (dryRun || (await confirm(question))) {
+        backupFile(run(hermes, ['config', 'path']).stdout.trim(), { dryRun });
+        if (entry) runWithAnswers(hermes, ['mcp', 'remove', 'serena'], 'y\n', { dryRun });
+        // Pergunta do Hermes: "habilitar todas as ferramentas?" (ou "salvar mesmo assim?") -> y.
+        runWithAnswers(hermes, ['mcp', 'add', 'serena', '--command', bin, '--args', ...serenaArgs('hermes')], 'y\n', { dryRun });
+        if (!dryRun) checkHermes(hermes, 'serena');
+      }
     }
   }
 }
