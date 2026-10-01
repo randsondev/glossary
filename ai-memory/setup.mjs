@@ -249,6 +249,9 @@ function launchdLoaded() {
 function startService(env, { dryRun, binaryChanged }) {
   log.step(MAC ? 'Serviço (launchd)' : 'Serviço (systemd --user)');
   if (MAC) {
+    // O modelo do plist vem no pacote; no dry-run da primeira instalação ele ainda não existe.
+    if (dryRun && !fs.existsSync(path.join(paths.install, 'packaging', 'launchd', `${LABEL}.plist`)))
+      return log.dry(`gravaria ${tilde(paths.plist)} (chmod 600) a partir do modelo do pacote e rodaria launchctl bootstrap gui/$(id -u)`);
     const xml = renderPlist(env);
     const same = fs.existsSync(paths.plist) && fs.readFileSync(paths.plist, 'utf8') === xml;
     if (same && !binaryChanged && launchdLoaded()) return log.ok(`${LABEL} já carregado com a mesma definição`);

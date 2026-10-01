@@ -85,6 +85,7 @@ finish();
 function enableHooks() {
   const current = run('git', ['-C', REPO, 'config', '--get', 'core.hooksPath']).stdout.trim();
   if (current === '.githooks') return;
+  log.step('Trava de pre-commit');
   if (dryRun) return log.dry('git config core.hooksPath .githooks (trava de pre-commit, só neste repositório)');
   run('git', ['-C', REPO, 'config', 'core.hooksPath', '.githooks']);
   log.ok('trava de pre-commit ativada (core.hooksPath = .githooks)');
