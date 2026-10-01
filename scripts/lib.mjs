@@ -233,12 +233,20 @@ export function resolveAgents(flag) {
 
 // ---------- configuração local (fora do repositório) ----------
 
-// Raízes extras de skills, por exemplo o repositório privado da equipe.
+// Raízes extras de skills, por exemplo o repositório privado da equipe. Cada item é
+// um caminho ou {"dir": caminho, "agents": [...]}; com "agents", as skills daquela raiz
+// só vão para as pastas lidas exclusivamente por esses agentes.
 export function extraRoots() {
   const file = path.join(CONFIG_DIR, 'roots.json');
   const data = readJSON(file, []);
   const list = Array.isArray(data) ? data : data.roots || [];
-  return list.map((p) => path.resolve(expandHome(p)));
+  return list.map((item) => {
+    const entry = typeof item === 'string' ? { dir: item } : item;
+    if (!entry?.dir) die(`${tilde(file)}: item sem "dir": ${JSON.stringify(item)}`);
+    const bad = (entry.agents || []).filter((a) => !AGENTS.includes(a));
+    if (bad.length) die(`${tilde(file)}: agente desconhecido em ${entry.dir}: ${bad.join(', ')}`);
+    return { dir: path.resolve(expandHome(entry.dir)), agents: entry.agents };
+  });
 }
 
 // Projetos com tratamento especial (workspace isolado no ai-memory, linguagem fixa no Serena).
@@ -259,7 +267,8 @@ export function skillRoots({ includeExtra = true } = {}) {
       if (fs.statSync(dir).isDirectory()) roots.push({ label: `vendor/${name}`, dir, own: false, source: name });
     }
   }
-  if (includeExtra) for (const dir of extraRoots()) roots.push({ label: tilde(dir), dir, own: true, extra: true });
+  if (includeExtra)
+    for (const { dir, agents } of extraRoots()) roots.push({ label: tilde(dir), dir, own: true, extra: true, agents });
   return roots;
 }
 

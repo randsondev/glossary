@@ -193,6 +193,12 @@ Depois abra um PR. Regras das skills próprias: `name` em `a-z0-9-` igual ao nom
 ["~/projetos/skills-do-time/skills"]
 ```
 
+Skills com regra ou acesso da empresa não devem chegar a um agente que use modelo de terceiros. Para limitar uma raiz a alguns agentes, use a forma com `agents`. A skill só entra numa pasta se **todos** os agentes que leem aquela pasta estiverem na lista. No exemplo abaixo, nada dessa raiz vai para `~/.openclaude/skills`:
+
+```json
+[{ "dir": "~/projetos/skills-do-time/skills", "agents": ["claude", "cursor", "hermes"] }]
+```
+
 ## 8. Desfazer
 
 ```bash
