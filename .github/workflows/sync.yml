@@ -1,0 +1,61 @@
+name: sync
+
+on:
+  schedule:
+    - cron: "17 9 * * 1" # segundas, 06:17 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GUARD_DENY: ${{ secrets.GUARD_DENY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: skills-ref (validador do agentskills.io)
+        run: pipx install skills-ref==0.1.1
+      - name: sync (já roda o guard em vendor/)
+        run: node scripts/sync.mjs --summary "$RUNNER_TEMP/summary.md"
+      - name: validate
+        run: node scripts/validate.mjs --skills-ref --no-extra
+      - name: guard
+        run: node scripts/guard.mjs --all --require-deny
+      - name: abrir ou atualizar o PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Nada mudou."
+            exit 0
+          fi
+          branch=sync/fontes
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "Atualização automática das fontes. O merge é sempre manual."
+            echo
+            echo "Antes de aprovar, leia o diff das skills alteradas: elas entram no contexto de todos os agentes."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$body"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git add -A
+          git commit -q -m "sync: atualiza vendor, ai-memory e Serena"
+          git push --force origin "$branch"
+          if [ "$(gh pr view "$branch" --json state -q .state 2>/dev/null)" = "OPEN" ]; then
+            gh pr edit "$branch" --body-file "$body"
+          else
+            gh pr create --base main --head "$branch" --title "sync: atualização semanal das fontes" --body-file "$body"
+          fi

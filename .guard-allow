@@ -1,0 +1,9 @@
+# Ocorrências legítimas que o scripts/guard.mjs deve ignorar.
+# Formato: <glob do arquivo> <nome do padrão>   ("*" vale para qualquer padrão)
+# Termos da empresa nunca entram aqui: eles não podem ser liberados.
+#
+# Exemplo:
+# vendor/*/NOTICE.md email
+
+# Autor dos commits do bot do GitHub Actions no PR semanal.
+.github/workflows/sync.yml email

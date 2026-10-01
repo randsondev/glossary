@@ -1,0 +1,184 @@
+{
+  "skills": {
+    "ponytail": {
+      "repo": "https://github.com/dietrichgebert/ponytail.git",
+      "ref": "main",
+      "commit": "e3ba2aa6f1e6f0bc4d69eb09c9f0d0a93af56156",
+      "committed": "2026-09-14",
+      "skills": {
+        "ponytail": {
+          "path": "skills/ponytail",
+          "sha256": "388ec42c9551f47d12555b1723b1af67b8fe18a8afbea0a8db96cfb870eb3803"
+        },
+        "ponytail-audit": {
+          "path": "skills/ponytail-audit",
+          "sha256": "e3d9eddf58dd7b4dae504266d8a5eb7b306db1e69114710800d554ef386ccfd0"
+        },
+        "ponytail-debt": {
+          "path": "skills/ponytail-debt",
+          "sha256": "368db847eb919b0d841d253da745e8215e234cb217609b55b27528e8cb754c84"
+        },
+        "ponytail-gain": {
+          "path": "skills/ponytail-gain",
+          "sha256": "c6d2cc7d7af635acadb96571fd71d9922acb8d8d856d37dc678aafe76a06a7fb"
+        },
+        "ponytail-help": {
+          "path": "skills/ponytail-help",
+          "sha256": "92f909eddf3b371e4737a85f60a8024cec6ae5cfb523561b8c56f86fcf3f52b0"
+        },
+        "ponytail-review": {
+          "path": "skills/ponytail-review",
+          "sha256": "cd3715f0513d93e4caab8cc30ad09080ae62f763ed8b95304fd84efda5fbf0be"
+        }
+      }
+    },
+    "mattpocock": {
+      "repo": "https://github.com/mattpocock/skills.git",
+      "ref": "main",
+      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "committed": "2026-09-29",
+      "skills": {
+        "ask-matt": {
+          "path": "skills/engineering/ask-matt",
+          "sha256": "4d7a383efe16d133ab76e5ffd44bfe3d9ff05fb9feedf3e8eaa968a590e5f63e"
+        },
+        "diagnosing-bugs": {
+          "path": "skills/engineering/diagnosing-bugs",
+          "sha256": "79cca571387cbb4e9f254c3f93fb8be51d36ebe6f3854d26d006c1f9e7c87b82"
+        },
+        "grill-with-docs": {
+          "path": "skills/engineering/grill-with-docs",
+          "sha256": "2dff19547f0f72000f8b88868e21b7d76c27cf5c7ececc6edf4042bbe06157ac"
+        },
+        "triage": {
+          "path": "skills/engineering/triage",
+          "sha256": "9c6b69d13831d354c1a62eaa047e3160617f9b035d411555268a343b51e96a0c"
+        },
+        "improve-codebase-architecture": {
+          "path": "skills/engineering/improve-codebase-architecture",
+          "sha256": "21e81aed6d25a2b16ad0e6b9ec65b398145a110d11fd76951263d13372822e9d"
+        },
+        "setup-matt-pocock-skills": {
+          "path": "skills/engineering/setup-matt-pocock-skills",
+          "sha256": "00ea45e6dbe99b412788ad3ca8dc3091d7fb0ab10f72848905739493013f686b"
+        },
+        "tdd": {
+          "path": "skills/engineering/tdd",
+          "sha256": "c4236fd83d4629d4aed684403fd277aece9feb347c798e964a9a78a2ae1eb654"
+        },
+        "to-spec": {
+          "path": "skills/engineering/to-spec",
+          "sha256": "f525dab8b9bd3961aa4813d8568ef6184f6e24aad5a020e129165ca6c220f836"
+        },
+        "to-tickets": {
+          "path": "skills/engineering/to-tickets",
+          "sha256": "5c1691ddf02291d5189213f8ffc82d2b05451131929bbc9e99052f912a05c300"
+        },
+        "wayfinder": {
+          "path": "skills/engineering/wayfinder",
+          "sha256": "fa164901a041cab31d281288ea4b5af5aeb0a0d557b586cf6b341998a3fb3eb3"
+        },
+        "implement": {
+          "path": "skills/engineering/implement",
+          "sha256": "1a7a56bca542f46ff8e42fa5ddd293dab21b38b6dad57e1bf3e76d12e41c5fc2"
+        },
+        "implement-spec": {
+          "path": "skills/engineering/implement-spec",
+          "sha256": "3e613d4c4ad1c95dc3489fa447a420875dd2b6b6750eace3dcbc4d218a7d6623"
+        },
+        "prototype": {
+          "path": "skills/engineering/prototype",
+          "sha256": "c4efd5e0f1c302b6225be83e8e42abdb05e13fde900484e4e2240e90b4e83eb6"
+        },
+        "research": {
+          "path": "skills/engineering/research",
+          "sha256": "b1976e3b4a7cdcee2f7ade52c0cf072bafdbac9cf3284568cab1aa258e584e69"
+        },
+        "domain-modeling": {
+          "path": "skills/engineering/domain-modeling",
+          "sha256": "18a9314d338b8135e4108d1d31d2fd57ad289cf8bf31d2acd6a6f3053ac22a38"
+        },
+        "codebase-design": {
+          "path": "skills/engineering/codebase-design",
+          "sha256": "e91e18258598832efe27af7e3c423ab262c6f8b8ecb6262d8fbb80d626ef0e19"
+        },
+        "code-review": {
+          "path": "skills/engineering/code-review",
+          "sha256": "2bf54bc5e5eed6f8c78b2dbe99bfcfcc0e0221e0c11dbf07ff0f27effb2aed76"
+        },
+        "pr": {
+          "path": "skills/engineering/pr",
+          "sha256": "fd6364a4c6714b4978b23abcbb170eaddeb99da87f2efee1f6e9baf9dfc2a446"
+        },
+        "retro": {
+          "path": "skills/engineering/retro",
+          "sha256": "09c4f9fe72fc5bc8e486a2bbb32dd785ca6264c56a53dd1bf9a334af72586efd"
+        },
+        "wizard": {
+          "path": "skills/engineering/wizard",
+          "sha256": "fd918004158f826ab85f20a69b75677be74dcbcea19066c4f2511b52fcd5af3a"
+        },
+        "grill-me": {
+          "path": "skills/productivity/grill-me",
+          "sha256": "14c292fe16c0aed833cbbabb0983515c8d665fb6061d9755b13dba870363323b"
+        },
+        "grilling": {
+          "path": "skills/productivity/grilling",
+          "sha256": "d5833e50e0081bbf5133b6c6b61aa8ba9ffae66e9071404b61e45b18f4cdb57e"
+        },
+        "handoff": {
+          "path": "skills/productivity/handoff",
+          "sha256": "fe287d0ae54ed66c99522e272af1020323ba4d4698ef60fe1fa63f042dffd313"
+        },
+        "teach": {
+          "path": "skills/productivity/teach",
+          "sha256": "d9fbfb966d425f19cdbeb34cceab6ead62041ccacd00da29b55412333cf9748a"
+        },
+        "to-questionnaire": {
+          "path": "skills/productivity/to-questionnaire",
+          "sha256": "560491db9f48174ca9f7b5dd1444bc9c3cb7ac2d9e3e673e48289ef3221f164e"
+        },
+        "wait-what": {
+          "path": "skills/productivity/wait-what",
+          "sha256": "7eb4f8dd850b68708fb62fe2d7486b633246bd388e745f6cb6744d47b7a73b2c"
+        },
+        "writing-for-agents": {
+          "path": "skills/productivity/writing-for-agents",
+          "sha256": "dc53f07d1f662137317789b9b5d74cfcc26dbcfc15038a7faf676c844d8638e8"
+        }
+      }
+    },
+    "awesome-copilot": {
+      "repo": "https://github.com/github/awesome-copilot.git",
+      "ref": "main",
+      "commit": "d6131471b85fbb4799e64175ebc42c9309ecc28a",
+      "committed": "2026-10-01",
+      "skills": {
+        "salesforce-apex-quality": {
+          "path": "skills/salesforce-apex-quality",
+          "sha256": "2eeecf3279a8fd9e921d96c29fbd05e6219de92d3a1c0d28d338037dc762cf91"
+        },
+        "salesforce-component-standards": {
+          "path": "skills/salesforce-component-standards",
+          "sha256": "2c78751c6b3e3e4a406e5aba49ae9414d9ccf832838fc876a18ffdf3cbe05ad8"
+        },
+        "salesforce-flow-design": {
+          "path": "skills/salesforce-flow-design",
+          "sha256": "c9ea48d6309064314c606aec739dd386f31a794885d001c3fae8412f24da638c"
+        }
+      }
+    }
+  },
+  "aiMemory": {
+    "version": "v2.5.2",
+    "assets": {
+      "macos-aarch64": "160881fab2be3d2e9cf64f656da517c961c1e14ff4987d75a70ee1c71e17e9ef",
+      "macos-x86_64": "35fe9b036707c587cfe75e21bbe4a49b00eac2018a047352970fd53d787e9c4a",
+      "linux-x86_64": "acbf6ee84e744a9ab0a8e133a3eefbbb77811d6b4d0ca9a281e664358c1a1fc8",
+      "linux-aarch64": "813e962b10b51877948805a3dc73bcbae512c143e18772e8ca170f1f83fd2ce7"
+    }
+  },
+  "serena": {
+    "version": "1.7.0"
+  }
+}

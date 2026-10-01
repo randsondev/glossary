@@ -1,0 +1,4 @@
+#!/bin/sh
+# Bloqueia o commit se algum arquivo no índice tiver dado sensível.
+# Ativado pelo glossary.mjs com: git config core.hooksPath .githooks
+exec node "$(git rev-parse --show-toplevel)/scripts/guard.mjs" --staged

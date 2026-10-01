@@ -1,0 +1,24 @@
+{
+  "targets": [
+    {
+      "dir": "~/.agents/skills",
+      "agents": ["cursor", "hermes"],
+      "exclude": []
+    },
+    {
+      "dir": "~/.claude/skills",
+      "agents": ["claude"],
+      "alsoReadBy": ["cursor"],
+      "exclude": ["code-review"]
+    },
+    {
+      "dir": "~/.openclaude/skills",
+      "agents": ["openclaude"],
+      "exclude": []
+    }
+  ],
+  "builtins": {
+    "claude": ["code-review"],
+    "cursor": ["loop", "review", "goal", "shell"]
+  }
+}

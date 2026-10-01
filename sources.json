@@ -1,0 +1,43 @@
+{
+  "skills": [
+    {
+      "id": "ponytail",
+      "repo": "https://github.com/dietrichgebert/ponytail.git",
+      "ref": "main",
+      "license": "MIT",
+      "dir": "skills"
+    },
+    {
+      "id": "mattpocock",
+      "repo": "https://github.com/mattpocock/skills.git",
+      "ref": "main",
+      "license": "MIT",
+      "pluginJson": ".claude-plugin/plugin.json"
+    },
+    {
+      "id": "awesome-copilot",
+      "repo": "https://github.com/github/awesome-copilot.git",
+      "ref": "main",
+      "license": "MIT",
+      "paths": [
+        "skills/salesforce-apex-quality",
+        "skills/salesforce-component-standards",
+        "skills/salesforce-flow-design"
+      ]
+    }
+  ],
+  "aiMemory": {
+    "repo": "https://github.com/akitaonrails/ai-memory",
+    "version": "v2.5.2",
+    "platforms": [
+      "macos-aarch64",
+      "macos-x86_64",
+      "linux-x86_64",
+      "linux-aarch64"
+    ]
+  },
+  "serena": {
+    "package": "serena-agent",
+    "version": "1.7.0"
+  }
+}
