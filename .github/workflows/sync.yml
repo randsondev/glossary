@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write # disparar a validação no branch do PR (ver o último passo)
 
 concurrency:
   group: sync
@@ -59,3 +60,6 @@ jobs:
           else
             gh pr create --base main --head "$branch" --title "sync: atualização semanal das fontes" --body-file "$body"
           fi
+          # PR aberto com o GITHUB_TOKEN não dispara outros workflows. Sem isto, a regra
+          # do main ("validate" obrigatório) deixaria o PR esperando um check que não roda.
+          gh workflow run validate.yml --ref "$branch"

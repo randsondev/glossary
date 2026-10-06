@@ -218,6 +218,22 @@ Depois abra um PR. Regras das skills próprias: `name` em `a-z0-9-` igual ao nom
 - o secret `GUARD_DENY` (Settings → Secrets and variables → Actions), com os mesmos termos do `guard-deny.txt`, um por linha;
 - "Allow GitHub Actions to create and approve pull requests" ligado (Settings → Actions → General).
 
+**Trava antes do merge**: no GitHub, o `main` fica protegido por uma regra (Settings → Rules → Rulesets → New branch ruleset):
+
+- **Target branches**: Include default branch.
+- **Restrict deletions** e **Block force pushes**.
+- **Require a pull request before merging**, com 0 aprovações obrigatórias (o GitHub não deixa você aprovar o próprio PR).
+- **Require status checks to pass**, com o check `validate`.
+- **Bypass list** vazia, para a regra valer também para quem administra o repositório.
+
+Com isso, ninguém faz push direto no `main`: toda mudança vai num branch, vira PR e só pode ser mergeada com o `validate` (regras das skills e trava contra vazamento) verde. O PR semanal do sync dispara a validação sozinho.
+
+```bash
+git switch -c minha-mudanca
+git add skills && git commit -m "Descreve a mudança"
+git push -u origin minha-mudanca     # depois abra o PR no GitHub
+```
+
 **Repo privado do time**: crie a lista de raízes extras em `~/.config/glossary/roots.json`. As skills de lá entram no link e no validate como as do glossary.
 
 ```json
