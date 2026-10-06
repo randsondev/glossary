@@ -3,7 +3,7 @@
 Cópia fiel, sem alterações, de skills de https://github.com/mattpocock/skills.
 
 - Fonte: https://github.com/mattpocock/skills
-- Commit: d81f3a183412e71a5b1e84ca21bc1a35eea03a60 (2026-09-29)
+- Commit: 4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d (2026-10-05)
 - Licença: MIT, Copyright (c) 2026 Matt Pocock. Texto completo em LICENSE.
 - Atualizado por `scripts/sync.mjs`. Não edite à mão: o `validate.mjs` confere cada skill pelo `sources.lock.json`.
 

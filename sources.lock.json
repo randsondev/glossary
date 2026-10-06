@@ -3,8 +3,8 @@
     "ponytail": {
       "repo": "https://github.com/dietrichgebert/ponytail.git",
       "ref": "main",
-      "commit": "e3ba2aa6f1e6f0bc4d69eb09c9f0d0a93af56156",
-      "committed": "2026-09-14",
+      "commit": "cd765194f5e625d2f96e80e63df1c1af0b03705b",
+      "committed": "2026-10-05",
       "skills": {
         "ponytail": {
           "path": "skills/ponytail",
@@ -12,35 +12,35 @@
         },
         "ponytail-audit": {
           "path": "skills/ponytail-audit",
-          "sha256": "e3d9eddf58dd7b4dae504266d8a5eb7b306db1e69114710800d554ef386ccfd0"
+          "sha256": "b8d3f82de6f677c11a3e758332e8fc668f1e8236a2466e1884bc08e07bcabcd2"
         },
         "ponytail-debt": {
           "path": "skills/ponytail-debt",
-          "sha256": "368db847eb919b0d841d253da745e8215e234cb217609b55b27528e8cb754c84"
+          "sha256": "aaf702af501b4261de8ab501dc61853a8059a6a8a52b3b8823c97cd0901f67f9"
         },
         "ponytail-gain": {
           "path": "skills/ponytail-gain",
-          "sha256": "c6d2cc7d7af635acadb96571fd71d9922acb8d8d856d37dc678aafe76a06a7fb"
+          "sha256": "c253e02de47ad3de9d586dcdb3603fa4033f23c9c2aba06ec9341d80c1554f34"
         },
         "ponytail-help": {
           "path": "skills/ponytail-help",
-          "sha256": "92f909eddf3b371e4737a85f60a8024cec6ae5cfb523561b8c56f86fcf3f52b0"
+          "sha256": "5c21368d626df8a7c47f61f3d0edf0a8c909a923cf1a7e221fb2354483bcba06"
         },
         "ponytail-review": {
           "path": "skills/ponytail-review",
-          "sha256": "cd3715f0513d93e4caab8cc30ad09080ae62f763ed8b95304fd84efda5fbf0be"
+          "sha256": "e27ce245ef37f27183d5815e3c28d45c46a6a665ba8e5b75b172d182c72924eb"
         }
       }
     },
     "mattpocock": {
       "repo": "https://github.com/mattpocock/skills.git",
       "ref": "main",
-      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
-      "committed": "2026-09-29",
+      "commit": "4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d",
+      "committed": "2026-10-05",
       "skills": {
         "ask-matt": {
           "path": "skills/engineering/ask-matt",
-          "sha256": "4d7a383efe16d133ab76e5ffd44bfe3d9ff05fb9feedf3e8eaa968a590e5f63e"
+          "sha256": "0173067a65de11c925d4dcf89408698ca5df828d2ab5effbe21997332107e679"
         },
         "diagnosing-bugs": {
           "path": "skills/engineering/diagnosing-bugs",
@@ -151,8 +151,8 @@
     "awesome-copilot": {
       "repo": "https://github.com/github/awesome-copilot.git",
       "ref": "main",
-      "commit": "d6131471b85fbb4799e64175ebc42c9309ecc28a",
-      "committed": "2026-10-01",
+      "commit": "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
+      "committed": "2026-10-02",
       "skills": {
         "salesforce-apex-quality": {
           "path": "skills/salesforce-apex-quality",
