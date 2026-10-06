@@ -163,6 +163,35 @@ Projetos com dado sensível ganham tratamento à parte, descrito num arquivo **l
 - **`serena`**: fixa as linguagens do projeto, sem detecção automática.
 - **Nunca** use roteador de terceiros (OrcaRouter, OpenRouter) nem o free tier do Gemini em sessões com dados de produção.
 
+**Ordem certa**: crie o `projects.json` e rode `node glossary.mjs --only ai-memory,serena` **antes** de abrir um agente no projeto. Sem o `.ai-memory.toml`, a captura vai para o workspace `default`.
+
+**Se o projeto já caiu no `default`** (aparece como `default` em http://127.0.0.1:49374/web), mova-o enquanto o workspace de destino ainda não tiver um projeto com o mesmo nome. Nesse caso a mudança é completa e não perde nada. Se o destino já tiver o projeto, o ai-memory mescla e mantém só as páginas duráveis.
+
+```bash
+cd ~/projetos/meu-projeto-salesforce
+~/Applications/ai-memory/ai-memory move-project --from-workspace default --to-workspace empresa --confirm --force
+```
+
+O `--force` só é exigido quando há uma sessão aberta no projeto. Ele é seguro: a mudança atualiza o apontamento da sessão.
+
+**Importar o histórico antigo**: as conversas que você já teve no projeto (Claude Code no terminal ou no VS Code, Cursor etc.) podem entrar na memória compartilhada. Rode dentro do projeto, depois do workspace criado:
+
+```bash
+~/Applications/ai-memory/ai-memory backfill --force --max-sessions 50 --dry-run   # mostra quantas sessões e para onde
+~/Applications/ai-memory/ai-memory backfill --force --max-sessions 50
+```
+
+O `--force` é necessário quando a memória já tem sessões; as que já existem não são duplicadas. Atenção: o backfill **não** aplica o `ignore_paths`. O que uma conversa antiga leu entra como está, mas fica só na sua máquina.
+
+**Memórias do Claude Code** (`~/.claude/projects/<projeto>/memory/*.md`) não são importadas pelo backfill. Para que os outros agentes também as usem, transforme-as em skills do repositório privado com `scripts/port-memories.mjs` (seção 7).
+
+**`.serena` dentro do projeto**: se o Serena rodou no projeto antes do setup, existe uma pasta `.serena` no repositório, e ela tem prioridade sobre a pasta central. Confira que não está commitada (`git ls-files .serena` não imprime nada) e mova:
+
+```bash
+mkdir -p ~/.serena/projects/meu-projeto-salesforce
+mv ~/projetos/meu-projeto-salesforce/.serena ~/.serena/projects/meu-projeto-salesforce/.serena
+```
+
 ## 7. Uso diário
 
 **Atualizar**: `git pull` no `~/projetos/glossary`. Mudanças no conteúdo das skills aparecem na hora, porque os agentes leem pelo symlink. Skill nova ou removida: `node scripts/link.mjs`.
@@ -178,7 +207,9 @@ node scripts/link.mjs
 
 Depois abra um PR. Regras das skills próprias: `name` em `a-z0-9-` igual ao nome da pasta (até 64 caracteres), `description` com até 1024 caracteres, `SKILL.md` com até 500 linhas. No frontmatter valem só os campos do padrão [agentskills.io](https://agentskills.io) mais `disable-model-invocation` e `argument-hint`.
 
-**Portar comandos do Cursor**: `node scripts/port-cursor-commands.mjs --dry-run` e depois sem `--dry-run`. O corpo é copiado sem alteração, com o mesmo nome. Se o guard bloquear, o comando tem dado da empresa: porte com `--to <repo privado>/skills`.
+**Portar comandos do Cursor**: `node scripts/port-cursor-commands.mjs --dry-run` e depois sem `--dry-run`. O corpo é copiado sem alteração, com o mesmo nome. Se o guard bloquear, o comando tem dado da empresa: porte com `--to <repo privado>/skills`. O guard só conhece os termos do `guard-deny.txt`, então crie esse arquivo **antes** de portar e leia os comandos que ficaram no público. Depois de portar, mova `~/.cursor/commands` para um backup, senão o Cursor mostra cada comando duas vezes.
+
+**Portar memórias do Claude Code**: monte um mapa (fica no repositório privado) agrupando as memórias em skills e rode `node scripts/port-memories.mjs --map <mapa.json> --to <repo privado>/skills`. O formato do mapa está no topo do script. Evite colar JSON grande no terminal, porque ele pode cortar o texto; prefira criar o arquivo num editor.
 
 **Trava contra vazamento**: o pre-commit roda `scripts/guard.mjs` e bloqueia e-mail, domínio `.com.br`, CPF, tokens (`sk-`, `ghp_`, `github_pat_`, `xoxb-`/`xoxp-`, `AKIA`), caminho absoluto de home e os termos da empresa. Os termos ficam em `~/.config/glossary/guard-deny.txt`, um por linha, e nunca no repositório. A mensagem mostra arquivo:linha e o tipo, nunca o valor. Ocorrência legítima vai para `.guard-allow` (exceto termo da empresa, que não tem exceção).
 
