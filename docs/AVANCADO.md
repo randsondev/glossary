@@ -176,14 +176,18 @@ cd ~/projetos/meu-projeto-salesforce
 
 O `--force` só é exigido quando há uma sessão aberta no projeto. Ele é seguro: a mudança atualiza o apontamento da sessão.
 
-**Importar o histórico antigo**: as conversas que você já teve no projeto (Claude Code no terminal ou no VS Code, Cursor etc.) podem entrar na memória compartilhada. Rode dentro do projeto, depois do workspace criado:
+**Importar o histórico antigo**: as conversas que você já teve no projeto (Claude Code no terminal ou no VS Code, Cursor etc.) podem entrar na memória compartilhada. O `./install.sh` faz isso quando você adiciona um projeto. À mão, rode dentro do projeto, depois do workspace criado:
 
 ```bash
-~/Applications/ai-memory/ai-memory backfill --force --max-sessions 50 --dry-run   # mostra quantas sessões e para onde
-~/Applications/ai-memory/ai-memory backfill --force --max-sessions 50
+~/Applications/ai-memory/ai-memory backfill --max-sessions 50 --dry-run   # mostra quantas sessões e para onde
+~/Applications/ai-memory/ai-memory backfill --max-sessions 50
 ```
 
-O `--force` é necessário quando a memória já tem sessões; as que já existem não são duplicadas. Atenção: o backfill **não** aplica o `ignore_paths`. O que uma conversa antiga leu entra como está, mas fica só na sua máquina.
+Sem `--force`, o backfill só importa quando o projeto ainda não tem nenhuma sessão na memória. **Evite o `--force`**: o ai-memory não reconhece conversas repetidas, então cada importação forçada duplica todo o histórico, inclusive as sessões que os hooks já tinham capturado. Se o projeto caiu no `default` e você o moveu (acima), o `--force` é o único jeito de trazer as conversas antigas: rode-o uma vez e depois `node ai-memory/dedupe.mjs --apply`.
+
+**Histórico duplicado**: `node ai-memory/dedupe.mjs` lista, para cada projeto da empresa, as sessões que estão na memória e têm a conversa original no disco, sem alterar nada. Com `--apply`, ele faz um backup completo (`~/ai-memory-backup-<data>.tar.gz`), apaga essas sessões e importa cada uma de novo, uma vez só. Sessões sem a conversa no disco ficam como estão. Feche as sessões do Claude Code e do Cursor nessas pastas antes. Uma sessão refeita perde só o que não estava na conversa original, como as tarefas de handoff que ela criou.
+
+Atenção: o backfill **não** aplica o `ignore_paths`. O que uma conversa antiga leu entra como está, mas fica só na sua máquina.
 
 **Memórias do Claude Code** (`~/.claude/projects/<projeto>/memory/*.md`) não são importadas pelo backfill. Para que os outros agentes também as usem, transforme-as em skills do repositório privado com `scripts/port-memories.mjs` (ver "Contribuir e manter").
 
@@ -262,6 +266,13 @@ Os três aceitam `--dry-run`. Os dados do ai-memory e a config do Serena ficam o
 - Apagar o plist, que pode conter o token: `rm ~/Library/LaunchAgents/com.github.akitaonrails.ai-memory.plist`.
 - Remover o Serena: `uv tool uninstall serena-agent`.
 - Restaurar uma config: copie de volta o `<arquivo>.glossary-bak-<data>` mais recente.
+- Restaurar um backup da memória (por exemplo, o do `dedupe.mjs`): pare o serviço, restaure e suba de novo.
+
+  ```bash
+  launchctl bootout gui/$(id -u)/com.github.akitaonrails.ai-memory   # Linux: systemctl --user stop ai-memory
+  ~/Applications/ai-memory/ai-memory restore --from ~/ai-memory-backup-<data>.tar.gz --force
+  ./install.sh --yes
+  ```
 
 ## Problemas comuns
 

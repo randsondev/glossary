@@ -30,7 +30,7 @@ As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em
 | **Nome do workspace da empresa** | Um nome curto, em minúsculas (ex.: `minhaempresa`). Só aparece na primeira vez. |
 | **Ligar a memória no OpenClaude?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. |
 | **Instalar o Serena?** | Enter (sim). Só aparece se você tiver o `uv`. |
-| **Importar o histórico?** | Enter (sim). As conversas antigas desses projetos entram na memória. |
+| **Importar o histórico?** | Enter (sim). As conversas antigas dos projetos que você acabou de adicionar entram na memória. Só aparece quando você adiciona um projeto. |
 | **Pode começar?** | Enter. |
 
 No fim aparece uma conferência. O esperado é **"tudo certo"**.
@@ -60,6 +60,7 @@ Rode `node glossary.mjs --check`. Ele aponta o que falta e qual comando resolve.
 
 - **"Falta o Node.js"**: `brew install node` e rode o instalador de novo.
 - **"servidor fora do ar"**: o serviço sobe sozinho no login. Rode `./install.sh --yes` para religá-lo.
+- **Conversas repetidas na memória** (o histórico foi importado mais de uma vez): `node ai-memory/dedupe.mjs` mostra o que vai corrigir, e `node ai-memory/dedupe.mjs --apply` faz um backup e corrige.
 - **Hermes: "streamable_http is not available"**: falta o suporte a MCP via HTTP no Hermes. Reinstale com o extra `mcp` (ex.: `uv tool install --force 'hermes-agent[mcp]'`).
 - **Skill aparecendo duas vezes no Cursor**: veja "Problemas comuns" em [AVANCADO.md](AVANCADO.md).
 

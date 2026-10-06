@@ -62,6 +62,7 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   }
   log.info('Projetos da empresa ficam com a memória separada dos projetos pessoais.');
   let workspace = localProjects().find((p) => p.aiMemory)?.aiMemory.workspace;
+  const added = [];
   for (;;) {
     if (yes) break;
     const answer = await ask('Pasta de um projeto da empresa para adicionar (Enter para pular):');
@@ -85,6 +86,7 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
     if (fs.existsSync(path.join(dir, 'sfdx-project.json'))) entry.serena = { language_servers: ['typescript'] };
     projects.projects.push(entry);
     known.add(dir);
+    added.push(dir);
     log.ok(`${tilde(dir)} -> workspace "${workspace}"${entry.serena ? ' (Salesforce: Serena com typescript)' : ''}`);
   }
 
@@ -103,9 +105,10 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   else log.info('Serena pulado: falta o uv (brew install uv). Dá para instalar depois com ./install.sh.');
 
   const company = projects.projects.filter((p) => p.aiMemory).map((p) => path.resolve(expandHome(p.dir)));
-  // O histórico só precisa ser importado uma vez; depois disso a captura é automática.
-  const backfill = company.length
-    ? await yesNo('Importar para a memória o histórico de conversas dos projetos da empresa?', !previous)
+  // Só nos projetos adicionados agora: o ai-memory não reconhece conversas repetidas, e importar
+  // de novo duplica o histórico. Depois disso a captura é automática.
+  const backfill = added.length
+    ? await yesNo('Importar para a memória o histórico de conversas desses projetos?', true)
     : false;
 
   // ---------- resumo ----------
@@ -114,7 +117,7 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   log.info(`memória compartilhada (ai-memory) em: ${memoryAgents.join(', ')}`);
   if (company.length) log.info(`workspace separado em: ${company.map(tilde).join(', ')}`);
   log.info(`Serena: ${serena ? 'sim' : 'não'}`);
-  if (backfill) log.info('importar o histórico desses projetos');
+  if (backfill) log.info(`importar o histórico de: ${added.map(tilde).join(', ')}`);
   if (!(await yesNo('Pode começar?', true))) return 1;
   setAssumeYes(true);
 
@@ -140,9 +143,8 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
 
   if (backfill) {
     log.step('Histórico dos projetos da empresa');
-    for (const dir of company.filter((d) => fs.existsSync(d))) {
-      runLive(BIN, ['backfill', '--force', '--max-sessions', '50'], { cwd: dir });
-    }
+    // Sem --force: se o projeto já tiver sessões na memória, o ai-memory não importa nada.
+    for (const dir of added) runLive(BIN, ['backfill', '--max-sessions', '50'], { cwd: dir });
   }
 
   writeJSON(INSTALL_FILE, { agents, memoryAgents, serena, updated: new Date().toISOString().slice(0, 10) });
