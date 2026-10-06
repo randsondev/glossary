@@ -19,7 +19,8 @@ export const INSTALL_FILE = path.join(CONFIG_DIR, 'install.json');
 export async function check({ agents } = {}) {
   const choices = readJSON(INSTALL_FILE, {});
   agents ||= choices.agents || resolveAgents();
-  const memoryAgents = (choices.memoryAgents || agents).filter((a) => agents.includes(a));
+  // Sem escolha registrada, vale o padrão do instalador: o OpenClaude fica fora da memória.
+  const memoryAgents = (choices.memoryAgents || agents.filter((a) => a !== 'openclaude')).filter((a) => agents.includes(a));
   const sources = readJSON(path.join(REPO, 'sources.json'));
   let errors = 0;
   let warnings = 0;
@@ -81,6 +82,7 @@ export async function check({ agents } = {}) {
     const oc = which('openclaude');
     const registered = oc && run(oc, ['mcp', 'get', 'ai-memory']).code === 0;
     if (memoryAgents.includes('openclaude')) registered ? ok('openclaude: MCP ligado') : bad('openclaude: MCP do ai-memory não registrado');
+    else if (!choices.memoryAgents) ok(registered ? 'openclaude: MCP ligado' : 'openclaude: sem memória compartilhada');
     else if (registered) warn('openclaude: tem a memória ligada, mas a instalação escolheu deixá-lo de fora');
     else ok('openclaude: sem memória compartilhada (escolha da instalação)');
   }
