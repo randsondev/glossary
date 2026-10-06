@@ -6,18 +6,17 @@ Skills e memória compartilhadas por **Claude Code, Cursor, Hermes e OpenClaude*
 - **Memória**: o [ai-memory](https://github.com/akitaonrails/ai-memory) captura as sessões de todos os agentes num servidor local. Dá para largar uma tarefa num agente e continuar em outro.
 - **Navegação de código**: o [Serena](https://github.com/oraios/serena) busca e edita símbolos via language server, em vez de ler arquivos inteiros.
 
-As três partes são independentes. O passo a passo completo está em [docs/PASSO-A-PASSO.md](docs/PASSO-A-PASSO.md).
+As três partes são independentes. O passo a passo está em [docs/PASSO-A-PASSO.md](docs/PASSO-A-PASSO.md), e os detalhes em [docs/AVANCADO.md](docs/AVANCADO.md).
 
 ## Começo rápido
 
 ```bash
 git clone https://github.com/randsondev/glossary.git ~/projetos/glossary
 cd ~/projetos/glossary
-node glossary.mjs --dry-run      # mostra o que faria
-node glossary.mjs                # aplica, pedindo confirmação antes de mexer em config de agente
+./install.sh
 ```
 
-Precisa de git e Node 20+. `--only skills|ai-memory|serena` roda só uma parte; `--agents claude,cursor,hermes,openclaude` escolhe os agentes (sem a flag, usa os que encontrar instalados).
+O instalador confere os pré-requisitos (git e Node 20+), faz as poucas perguntas no começo, roda tudo na ordem certa e termina com uma conferência. O passo a passo, com o que responder em cada pergunta, está em [docs/PASSO-A-PASSO.md](docs/PASSO-A-PASSO.md). Para conferir depois: `node glossary.mjs --check`. Para atualizar: `git pull && ./install.sh --yes`.
 
 ## Onde cada agente lê
 
@@ -36,7 +35,9 @@ vendor/<fonte>/<nome>/          cópia fiel das fontes + LICENSE + NOTICE.md
 sources.json                    fontes de skills e versões fixadas do ai-memory e do Serena
 sources.lock.json               commit de cada fonte e sha256 de cada skill e de cada binário
 link.json                       pastas de destino por agente e exclusões
-glossary.mjs                    roda tudo em sequência (idempotente, --dry-run)
+install.sh                      instalação guiada (chama scripts/install.mjs)
+glossary.mjs                    roda tudo em sequência (idempotente, --dry-run, --check)
+scripts/check.mjs               confere a instalação inteira, sem alterar nada
 scripts/validate.mjs            regras das skills (estritas nas próprias)
 scripts/link.mjs                symlinks nas pastas dos agentes (--unlink desfaz)
 scripts/sync.mjs                atualiza vendor/ e as versões (o PR semanal usa este)

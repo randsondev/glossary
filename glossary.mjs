@@ -5,6 +5,9 @@
 //                     [--only skills|ai-memory|serena] [--sync] [--no-claude-dir]
 //                     [--llm none|anthropic|anthropic-oauth] [--model <id>]
 //                     [--memories keep|off] [--trusted "<glob>"]
+//   node glossary.mjs --check     confere a instalação inteira, sem alterar nada
+//
+// Para instalar do zero, prefira ./install.sh, que faz as perguntas antes e roda tudo em ordem.
 //
 // Idempotente: rodar de novo só aplica o que mudou. Pede confirmação antes de
 // escrever em config de agente, de rodar o setup-token e de mexer em repositório da empresa.
@@ -12,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { setup as aiMemorySetup } from './ai-memory/setup.mjs';
+import { check } from './scripts/check.mjs';
 import { link } from './scripts/link.mjs';
 import { REPO, CONFIG_DIR, die, extraRoots, log, resolveAgents, run, setAssumeYes, tilde } from './scripts/lib.mjs';
 import { setup as serenaSetup } from './serena/setup.mjs';
@@ -32,15 +36,19 @@ const { values } = parseArgs({
     model: { type: 'string' },
     memories: { type: 'string' },
     trusted: { type: 'string' },
+    check: { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
 
 if (values.help) {
-  const header = fs.readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 10);
+  const lines = fs.readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1);
+  const header = lines.slice(0, lines.findIndex((l) => !l.startsWith('//')));
   console.log(header.map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
   process.exit(0);
 }
+
+if (values.check) process.exit(await check({ agents: values.agents ? resolveAgents(values.agents) : undefined }));
 
 const dryRun = Boolean(values['dry-run']);
 setAssumeYes(values.yes);

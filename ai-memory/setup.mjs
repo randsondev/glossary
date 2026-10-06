@@ -29,6 +29,7 @@ import {
   resolveAgents,
   run,
   runLive,
+  runQuiet,
   runWithAnswers,
   setAssumeYes,
   sha256File,
@@ -37,13 +38,13 @@ import {
 } from '../scripts/lib.mjs';
 
 const BASE_URL = 'http://127.0.0.1:49374';
-const MCP_URL = `${BASE_URL}/mcp`;
+export const MCP_URL = `${BASE_URL}/mcp`;
 const LABEL = 'com.github.akitaonrails.ai-memory';
 const MAC = process.platform === 'darwin';
 const LLM_KEYS = ['AI_MEMORY_LLM_PROVIDER', 'AI_MEMORY_LLM_MODEL', 'ANTHROPIC_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
 const DEFAULT_MODEL = 'claude-haiku-4-5';
 
-const paths = {
+export const paths = {
   install: MAC ? path.join(HOME, 'Applications', 'ai-memory') : path.join(HOME, '.local', 'opt', 'ai-memory'),
   data: MAC
     ? path.join(HOME, 'Library', 'Application Support', 'ai-memory')
@@ -53,7 +54,12 @@ const paths = {
   unit: path.join(HOME, '.config', 'systemd', 'user', 'ai-memory.service'),
   envFile: path.join(HOME, '.config', 'ai-memory', 'env'),
 };
-const BIN = path.join(paths.install, 'ai-memory');
+export const BIN = path.join(paths.install, 'ai-memory');
+// Arquivos de config que o ai-memory grava em cada agente com hooks: [MCP, hooks].
+export const AGENT_FILES = {
+  claude: [path.join(HOME, '.claude.json'), path.join(HOME, '.claude', 'settings.json')],
+  cursor: [path.join(HOME, '.cursor', 'mcp.json'), path.join(HOME, '.cursor', 'hooks.json')],
+};
 
 function platformAsset() {
   const arch = { arm64: 'aarch64', x64: 'x86_64' }[process.arch];
@@ -119,7 +125,7 @@ function initData({ dryRun }) {
 // ---------- 2. LLM ----------
 
 // Variáveis que nós mesmos gravamos no plist (macOS) ou no arquivo env (Linux).
-function readServiceEnv() {
+export function readServiceEnv() {
   const env = {};
   if (MAC && fs.existsSync(paths.plist)) {
     const xml = fs.readFileSync(paths.plist, 'utf8');
@@ -242,7 +248,7 @@ function writePrivate(file, content) {
   fs.chmodSync(file, 0o600);
 }
 
-function launchdLoaded() {
+export function launchdLoaded() {
   return run('launchctl', ['print', `gui/${process.getuid()}/${LABEL}`]).code === 0;
 }
 
@@ -283,7 +289,14 @@ function startService(env, { dryRun, binaryChanged }) {
   }
 }
 
-function httpStatus(url) {
+// Serviço carregado mas sem responder (travou, ficou num estado ruim): reinicia o processo.
+function restartService() {
+  log.warn('o servidor não respondeu; reiniciando o serviço');
+  if (MAC) runLive('launchctl', ['kickstart', '-k', `gui/${process.getuid()}/${LABEL}`]);
+  else runLive('systemctl', ['--user', 'restart', 'ai-memory']);
+}
+
+export function httpStatus(url) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => (res.resume(), resolve(res.statusCode)));
     req.on('error', () => resolve(0));
@@ -302,7 +315,7 @@ async function waitHealthy(seconds = 30) {
 // ---------- 4. agentes ----------
 
 // MCP registrado e algum hook chamando o ai-memory: o agente já está ligado.
-function wired(agent, files) {
+export function wired(agent, files) {
   const [mcpFile, hooksFile] = files;
   const mcp = readJSON(mcpFile, {});
   const hooks = fs.existsSync(hooksFile) ? fs.readFileSync(hooksFile, 'utf8') : '';
@@ -312,10 +325,7 @@ function wired(agent, files) {
 async function wireAgents(agents, { dryRun, binaryChanged }) {
   log.step('Ligar os agentes ao ai-memory');
   const ai = (args) => runLive(BIN, args, { dryRun });
-  const files = {
-    claude: [path.join(HOME, '.claude.json'), path.join(HOME, '.claude', 'settings.json')],
-    cursor: [path.join(HOME, '.cursor', 'mcp.json'), path.join(HOME, '.cursor', 'hooks.json')],
-  };
+  const files = AGENT_FILES;
   for (const [agent, client] of [['claude', 'claude-code'], ['cursor', 'cursor']]) {
     if (!agents.includes(agent)) continue;
     if (!binaryChanged && wired(agent, files[agent])) {
@@ -347,7 +357,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     else if (run(oc, ['mcp', 'get', 'ai-memory']).code === 0) log.ok('openclaude: ai-memory já registrado');
     else if (dryRun || (await confirm('openclaude: registrar o MCP do ai-memory no escopo de usuário?'))) {
       backupFile(path.join(HOME, '.openclaude.json'), { dryRun });
-      runLive(oc, ['mcp', 'add', '--scope', 'user', '--transport', 'http', 'ai-memory', MCP_URL], { dryRun });
+      runQuiet(oc, ['mcp', 'add', '--scope', 'user', '--transport', 'http', 'ai-memory', MCP_URL], { dryRun });
     }
   }
 
@@ -431,7 +441,7 @@ async function uninstall(agents, { dryRun }) {
   const hermes = agents.includes('hermes') && which('hermes');
   if (hermes) runWithAnswers(hermes, ['mcp', 'remove', 'ai-memory'], 'y\n', { dryRun });
   const oc = agents.includes('openclaude') && which('openclaude');
-  if (oc) runLive(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory'], { dryRun });
+  if (oc) runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory'], { dryRun });
   if (MAC) {
     if (launchdLoaded()) runLive('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { dryRun });
     log.info(`plist mantido em ${tilde(paths.plist)} (tem o token, se houver; apague se não for usar mais)`);
@@ -444,7 +454,7 @@ async function uninstall(agents, { dryRun }) {
 
 // ---------- principal ----------
 
-export async function setup({ dryRun = false, agents, llm, model, uninstall: off = false } = {}) {
+export async function setup({ dryRun = false, agents, llm, model, uninstall: off = false, summary = true } = {}) {
   if (off) return uninstall(agents, { dryRun });
   const binaryChanged = installBinary({ dryRun });
   if (!dryRun || fs.existsSync(BIN)) initData({ dryRun });
@@ -453,8 +463,10 @@ export async function setup({ dryRun = false, agents, llm, model, uninstall: off
   if (manual) log.info('esperando o servidor subir (até 2 min)...');
   if (dryRun) {
     log.dry(`esperaria ${MCP_URL} responder 405`);
-  } else if (await waitHealthy(manual ? 120 : 30)) {
+  } else if (await waitHealthy(manual ? 120 : 15)) {
     log.ok(`${MCP_URL} respondeu 405 (servidor no ar)`);
+  } else if (!manual && (restartService(), await waitHealthy(30))) {
+    log.ok(`${MCP_URL} respondeu 405 depois de reiniciar o serviço`);
   } else {
     log.err(`${MCP_URL} não respondeu; veja ${MAC ? tilde(path.join(paths.logs, 'stderr.log')) : 'journalctl --user -u ai-memory'}`);
     return 1;
@@ -462,6 +474,7 @@ export async function setup({ dryRun = false, agents, llm, model, uninstall: off
   await wireAgents(agents, { dryRun, binaryChanged });
   await isolateProjects({ dryRun });
 
+  if (!summary) return 0;
   log.step('Para conferir');
   if (MAC) log.info(`launchctl print gui/$(id -u)/${LABEL} | grep state`);
   else log.info('systemctl --user status ai-memory');
