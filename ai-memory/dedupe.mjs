@@ -5,6 +5,7 @@
 // conversas antigas da pasta, e uma sessão que os hooks já tinham capturado também entra outra vez.
 // Para cada projeto do projects.json, este script apaga as sessões que têm a conversa original no
 // disco e importa cada uma de novo, uma vez só. Antes de mudar qualquer coisa, faz um backup completo.
+// Sessões sem a conversa no disco, ou com uma conversa sem data, ficam como estão.
 //
 //   node ai-memory/dedupe.mjs           mostra o que faria (não altera nada)
 //   node ai-memory/dedupe.mjs --apply   faz o backup e corrige
@@ -22,12 +23,23 @@ const observations = () => /observations:\s+(\d+)/.exec(run(BIN, ['status']).std
 function sessionsWithTranscript(cwd) {
   const r = run(BIN, ['repair-backfill-timestamps', '--json'], { cwd });
   if (r.code !== 0) return null;
-  const [report] = JSON.parse(r.stdout);
-  return [
+  return JSON.parse(r.stdout).flatMap((report) => [
     ...report.repaired.map((s) => s.session_id),
     ...report.skipped.filter((s) => s.reason !== 'not_found').map((s) => s.session_id),
-  ];
+  ]);
 }
+
+// Roda o backfill e devolve o resumo em JSON (null se falhar).
+function backfill(cwd, args) {
+  const r = run(BIN, ['backfill', '--json', ...args], { cwd });
+  try {
+    return r.code === 0 ? JSON.parse(r.stdout) : null;
+  } catch {
+    return null;
+  }
+}
+
+const lastLine = (r) => (r.stderr || r.stdout).trim().split('\n').pop();
 
 export async function dedupe({ apply = false } = {}) {
   if (!exists(BIN)) die('ai-memory não instalado (rode ./install.sh)');
@@ -59,23 +71,33 @@ export async function dedupe({ apply = false } = {}) {
   const backup = path.join(HOME, `ai-memory-backup-${stamp}.tar.gz`);
   if (exists(backup)) die(`${tilde(backup)} já existe; rode de novo em alguns segundos`);
   const b = run(BIN, ['backup', '--to', backup]);
-  if (b.code !== 0) die(`o backup falhou, nada foi alterado: ${(b.stderr || b.stdout).trim().split('\n').pop()}`);
+  if (b.code !== 0) die(`o backup falhou, nada foi alterado: ${lastLine(b)}`);
   log.ok(`backup em ${tilde(backup)}`);
 
   let failed = 0;
   for (const { dir, ids } of plan) {
     log.step(tilde(dir));
+    let done = 0;
+    // A contagem de progresso fica na mesma linha; uma mensagem começa na linha seguinte.
+    const note = (print, msg) => (process.stdout.isTTY && process.stdout.write('\n'), print(msg));
     for (const [i, id] of ids.entries()) {
-      // Só importa de novo o que conseguiu apagar; se o apagar falhar, a sessão fica como estava.
-      let r = run(BIN, ['purge-session', '--session-id', id, '--confirm'], { cwd: dir });
-      if (r.code === 0) r = run(BIN, ['backfill', '--session', id, '--force'], { cwd: dir });
-      if (r.code !== 0) {
+      if (process.stdout.isTTY) process.stdout.write(`\r    ${i + 1}/${ids.length}`);
+      // Só apaga a sessão depois de confirmar que a conversa dela pode ser importada de novo.
+      if (backfill(dir, ['--session', id, '--force', '--dry-run'])?.selected !== 1) {
+        note(log.warn, `sessão ${id}: a conversa original não foi encontrada; ficou como estava`);
+        continue;
+      }
+      const purge = run(BIN, ['purge-session', '--session-id', id, '--confirm'], { cwd: dir });
+      if (purge.code !== 0) {
         failed++;
-        log.err(`sessão ${id}: ${(r.stderr || r.stdout).trim().split('\n').pop()}`);
-      } else if (process.stdout.isTTY) process.stdout.write(`\r    ${i + 1}/${ids.length}`);
+        note(log.err, `sessão ${id}: não consegui apagar (${lastLine(purge)}); ficou como estava`);
+      } else if (backfill(dir, ['--session', id, '--force'])?.imported_sessions !== 1) {
+        failed++;
+        note(log.err, `sessão ${id}: foi apagada, mas a nova importação falhou`);
+      } else done++;
     }
     if (process.stdout.isTTY) process.stdout.write('\n');
-    log.ok(`${ids.length - failed} sessão(ões) importadas uma vez só`);
+    log.ok(`${done} sessão(ões) importadas uma vez só`);
   }
   log.info(`observações na memória: ${before} -> ${observations()}`);
   if (failed) {
