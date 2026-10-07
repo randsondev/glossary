@@ -24,6 +24,7 @@ import {
   resolveAgents,
   run,
   runLive,
+  runQuiet,
   runWithAnswers,
   setAssumeYes,
   tilde,
@@ -32,8 +33,8 @@ import {
 } from '../scripts/lib.mjs';
 
 const SERENA_HOME = path.join(HOME, '.serena');
-const CONFIG = path.join(SERENA_HOME, 'serena_config.yml');
-const FOLDER_LOCATION = path.join(SERENA_HOME, 'projects', '$projectFolderName', '.serena');
+export const CONFIG = path.join(SERENA_HOME, 'serena_config.yml');
+export const FOLDER_LOCATION = path.join(SERENA_HOME, 'projects', '$projectFolderName', '.serena');
 const CONTEXT = { claude: 'claude-code', openclaude: 'claude-code', cursor: 'ide', hermes: 'ide' };
 
 function serenaArgs(agent) {
@@ -41,13 +42,13 @@ function serenaArgs(agent) {
 }
 
 // Um registro já existente serve se tem o contexto certo e ativa o projeto pela pasta atual.
-function argsOk(args, agent) {
+export function argsOk(args, agent) {
   return /(^|\s)--project-from-cwd(\s|$)/.test(args) && new RegExp(`--context[ =]${CONTEXT[agent]}(\\s|$)`).test(args);
 }
 
 // ---------- binário ----------
 
-function findSerena() {
+export function findSerena() {
   return which('serena') || [path.join(HOME, '.local', 'bin', 'serena')].find((p) => fs.existsSync(p)) || null;
 }
 
@@ -84,7 +85,7 @@ function findBlock(lines, key) {
   return { start, end };
 }
 
-function readList(lines, key) {
+export function readList(lines, key) {
   const b = findBlock(lines, key);
   if (!b) return [];
   const inline = lines[b.start].slice(key.length + 1).trim();
@@ -216,13 +217,13 @@ async function wireAgents(bin, agents, { dryRun }) {
       }
       if (!dryRun && !(await confirm(`${agent}: trocar pelo registro do glossary (${serenaArgs(agent).join(' ')})?`))) continue;
       backupFile(cfg, { dryRun });
-      runLive(cli, ['mcp', 'remove', '--scope', 'user', 'serena'], { dryRun });
-      runLive(cli, add, { dryRun });
+      runQuiet(cli, ['mcp', 'remove', '--scope', 'user', 'serena'], { dryRun });
+      runQuiet(cli, add, { dryRun });
       continue;
     }
     if (!dryRun && !(await confirm(`${agent}: registrar o serena no escopo de usuário (${tilde(cfg)})?`))) continue;
     backupFile(cfg, { dryRun });
-    runLive(cli, add, { dryRun });
+    runQuiet(cli, add, { dryRun });
   }
 
   if (agents.includes('cursor')) {
@@ -268,7 +269,7 @@ async function uninstall(agents, { dryRun }) {
   log.step('Remover o MCP do Serena dos agentes');
   for (const agent of ['claude', 'openclaude']) {
     const cli = agents.includes(agent) && (agent === 'claude' ? findClaudeBinary() : which('openclaude'));
-    if (cli) runLive(cli, ['mcp', 'remove', '--scope', 'user', 'serena'], { dryRun });
+    if (cli) runQuiet(cli, ['mcp', 'remove', '--scope', 'user', 'serena'], { dryRun });
   }
   if (agents.includes('cursor')) {
     const file = path.join(HOME, '.cursor', 'mcp.json');
@@ -289,7 +290,7 @@ async function uninstall(agents, { dryRun }) {
   return 0;
 }
 
-export async function setup({ dryRun = false, agents, memories, trusted, uninstall: off = false } = {}) {
+export async function setup({ dryRun = false, agents, memories, trusted, uninstall: off = false, summary = true } = {}) {
   if (off) return uninstall(agents, { dryRun });
   if (memories && !['keep', 'off'].includes(memories)) die('--memories aceita keep ou off');
   const bin = await ensureBinary({ dryRun });
@@ -298,6 +299,7 @@ export async function setup({ dryRun = false, agents, memories, trusted, uninsta
   await configureProjects(bin, { dryRun });
   await wireAgents(bin || 'serena', agents, { dryRun });
 
+  if (!summary) return 0;
   log.step('Para conferir');
   log.info('serena --version');
   log.info('Claude Code: /mcp mostra "serena"; /context mostra quanto as ferramentas ocupam');

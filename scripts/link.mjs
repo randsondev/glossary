@@ -41,7 +41,25 @@ function collectSkills(roots) {
   return { byName, dupes };
 }
 
-function linkTarget(linkPath) {
+// Skills que devem estar linkadas numa pasta de destino. Uma raiz com "agents" no
+// roots.json só entra se todos que leem a pasta estiverem na lista.
+function wantedFor(t, byName) {
+  const exclude = new Set(t.exclude || []);
+  const readers = [...t.agents, ...(t.alsoReadBy || [])];
+  const allowed = (skill) => !skill.rootAgents || readers.every((a) => skill.rootAgents.includes(a));
+  return new Map([...byName].filter(([name, skill]) => !exclude.has(name) && allowed(skill)));
+}
+
+// Para cada pasta lida pelos agentes, o que deveria estar lá (usado pela conferência).
+export function expectedLinks(agents) {
+  const conf = readJSON(path.join(REPO, 'link.json'));
+  const { byName } = collectSkills(skillRoots().filter((r) => fs.existsSync(r.dir)));
+  return conf.targets
+    .filter((t) => t.agents.some((a) => agents.includes(a)))
+    .map((t) => ({ target: t, dir: expandHome(t.dir), wanted: wantedFor(t, byName) }));
+}
+
+export function linkTarget(linkPath) {
   return path.resolve(path.dirname(linkPath), fs.readlinkSync(linkPath));
 }
 
@@ -49,7 +67,7 @@ function isUnder(p, roots) {
   return roots.some((r) => p === r || p.startsWith(r + path.sep));
 }
 
-export async function link({ dryRun = false, agents, noClaudeDir = false, unlink = false } = {}) {
+export async function link({ dryRun = false, agents, noClaudeDir = false, unlink = false, quiet = false } = {}) {
   const conf = readJSON(path.join(REPO, 'link.json'));
   const roots = skillRoots();
   // Raízes de execuções anteriores também contam: assim os links de uma raiz
@@ -73,16 +91,13 @@ export async function link({ dryRun = false, agents, noClaudeDir = false, unlink
     return 0;
   }
 
-  const act = (msg, fn) => (dryRun ? log.dry(msg) : (fn(), log.info(msg)));
+  // quiet: só a contagem por pasta, sem uma linha por skill (usado pelo install).
+  const act = (msg, fn) => (dryRun ? log.dry(msg) : (fn(), quiet || log.info(msg)));
   let skipped = 0;
   for (const t of targets) {
     const dir = expandHome(t.dir);
-    const exclude = new Set(t.exclude || []);
     const off = unlink || (noClaudeDir && t.dir === '~/.claude/skills');
-    // Raiz com "agents" no roots.json: só entra numa pasta se todos que a leem estão na lista.
-    const readers = [...t.agents, ...(t.alsoReadBy || [])];
-    const allowed = (skill) => !skill.rootAgents || readers.every((a) => skill.rootAgents.includes(a));
-    const wanted = off ? new Map() : new Map([...byName].filter(([name, skill]) => !exclude.has(name) && allowed(skill)));
+    const wanted = off ? new Map() : wantedFor(t, byName);
     const counts = { criados: 0, atualizados: 0, removidos: 0, iguais: 0 };
     log.step(`${t.dir} (${t.agents.join(', ')})`);
     if (!fs.existsSync(dir)) {

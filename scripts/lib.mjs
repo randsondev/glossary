@@ -148,6 +148,21 @@ export function runLive(cmd, args, { dryRun = false, cwd, env } = {}) {
   return r.status;
 }
 
+// Roda capturando a saída: mostra o comando e só imprime o que ele disse se falhar.
+// Para CLIs com saída longa (o OpenClaude imprime um banner a cada comando).
+export function runQuiet(cmd, args, { dryRun = false } = {}) {
+  const shown = [cmd, ...args].map((a) => tilde(a)).map((a) => (/[\s"']/.test(a) ? JSON.stringify(a) : a)).join(' ');
+  if (dryRun) {
+    log.dry(shown);
+    return 0;
+  }
+  log.info(`$ ${shown}`);
+  const r = run(cmd, args);
+  if (r.code === 0) log.ok('feito');
+  else log.err(`falhou (código ${r.code}): ${(r.stderr || r.stdout).trim().split('\n').slice(-3).join(' | ')}`);
+  return r.code;
+}
+
 // Para CLIs interativas com perguntas previsíveis: as respostas vão pelo stdin.
 export function runWithAnswers(cmd, args, answers, { dryRun = false } = {}) {
   const shown = [cmd, ...args].map((a) => tilde(a)).join(' ');
@@ -351,7 +366,7 @@ export async function ask(question, fallback = '') {
 // Pergunta sim/não. Com --yes responde sim; sem terminal interativo responde não.
 export async function confirm(question) {
   if (assumeYes) {
-    log.info(`${question} [sim: --yes]`);
+    log.info(`${question} [sim]`);
     return true;
   }
   if (!process.stdin.isTTY) {
