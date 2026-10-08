@@ -13,7 +13,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { BIN, readServiceEnv, setup as aiMemorySetup } from '../ai-memory/setup.mjs';
+import { discoverHistory, importHistory, showHistory } from '../ai-memory/history.mjs';
+import { readServiceEnv, setup as aiMemorySetup, unwireOpenclaudeHooks } from '../ai-memory/setup.mjs';
 import { findSerena, setup as serenaSetup } from '../serena/setup.mjs';
 import { INSTALL_FILE, check } from './check.mjs';
 import { link } from './link.mjs';
@@ -31,7 +32,6 @@ import {
   readJSON,
   resolveAgents,
   run,
-  runLive,
   runQuiet,
   setAssumeYes,
   tilde,
@@ -121,11 +121,18 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
   else log.info('Serena pulado: falta o uv (brew install uv). Dá para instalar depois com ./install.sh.');
 
   const company = projects.projects.filter((p) => p.aiMemory).map((p) => path.resolve(expandHome(p.dir)));
-  // Só nos projetos adicionados agora: o ai-memory não reconhece conversas repetidas, e importar
-  // de novo duplica o histórico. Depois disso a captura é automática.
-  const backfill = added.length
-    ? await yesNo('Importar para a memória o histórico de conversas desses projetos?', true)
-    : false;
+  // O que os agentes já guardaram neste computador: oferecido uma vez por computador, e de novo
+  // para cada projeto da empresa adicionado. Não duplica (ver ai-memory/history.mjs).
+  const history = discoverHistory().map((e) => ({ ...e, company: company.includes(e.dir) }));
+  let importList = [];
+  if (!previous?.history && history.length) {
+    log.info(`Os agentes já guardaram conversas em ${history.length} pasta(s) deste computador:`);
+    showHistory(history);
+    log.info('Um projeto da empresa que ainda não foi adicionado (pergunta acima) entraria na memória pessoal.');
+    if (await yesNo('Levar tudo isso para a memória compartilhada?', true)) importList = history;
+  } else if (added.length && (await yesNo('Importar para a memória o histórico de conversas desses projetos?', true))) {
+    importList = added.map((dir) => history.find((e) => e.dir === dir) || { dir, sessions: 0, memories: [] });
+  }
 
   // ---------- resumo ----------
   log.step('Vou fazer');
@@ -135,7 +142,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
   log.info(`Serena: ${serena ? 'sim' : 'não'}`);
   if (!extraRoots().length) log.info('criar o repositório privado (só nesta máquina) ao lado do glossary');
   if (denyTerms.length) log.info(`trava de commit com ${denyTerms.length} nome(s) da empresa`);
-  if (backfill) log.info(`importar o histórico de: ${added.map(tilde).join(', ')}`);
+  if (importList.length) log.info(`levar para a memória o histórico de ${importList.length} pasta(s)`);
   if (!(await yesNo('Pode começar?', true))) return 1;
   setAssumeYes(true);
 
@@ -162,19 +169,20 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     log.info('openclaude: desligando a memória compartilhada');
     runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory']);
   }
+  if (oc) unwireOpenclaudeHooks();
 
   if (serena) {
     log.step('Serena');
     await serenaSetup({ agents, memories: 'off', summary: false });
   }
 
-  if (backfill) {
-    log.step('Histórico dos projetos da empresa');
-    // Sem --force: se o projeto já tiver sessões na memória, o ai-memory não importa nada.
-    for (const dir of added) runLive(BIN, ['backfill', '--max-sessions', '50'], { cwd: dir });
+  if (importList.length) {
+    log.step('Histórico dos agentes');
+    importHistory(importList);
   }
 
-  writeJSON(INSTALL_FILE, { agents, memoryAgents, serena, updated: new Date().toISOString().slice(0, 10) });
+  const asked = Boolean(previous?.history || history.length);
+  writeJSON(INSTALL_FILE, { agents, memoryAgents, serena, history: asked, updated: new Date().toISOString().slice(0, 10) });
 
   log.step('Conferência');
   const result = await check({ agents });

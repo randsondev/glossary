@@ -9,7 +9,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { AGENT_FILES, BIN, MCP_URL, httpStatus, wired } from '../ai-memory/setup.mjs';
+import {
+  AGENT_FILES,
+  BIN,
+  HERMES_ALLOWLIST,
+  MCP_URL,
+  OPENCLAUDE_SETTINGS,
+  hasText,
+  hermesHooksWired,
+  httpStatus,
+  wired,
+} from '../ai-memory/setup.mjs';
 import { CONFIG as SERENA_CONFIG, argsOk, findSerena, readList } from '../serena/setup.mjs';
 import { expectedLinks, linkTarget } from './link.mjs';
 import {
@@ -95,16 +105,25 @@ export async function check({ agents } = {}) {
     try {
       entry = r.code === 0 ? JSON.parse(r.stdout) : null;
     } catch {}
+    const config = hermes ? run(hermes, ['config', 'path']).stdout.trim() : '';
+    const hooks = Boolean(config) && hermesHooksWired(config);
     if (!entry) bad('hermes: MCP do ai-memory não registrado');
     else if (entry.enabled === false) warn('hermes: MCP do ai-memory registrado mas desligado (hermes mcp test ai-memory)');
-    else ok('hermes: MCP ligado');
+    else if (!hooks) warn('hermes: MCP ligado, mas sem os hooks que gravam as sessões (rode ./install.sh)');
+    else if (!hasText(HERMES_ALLOWLIST, 'ai-memory')) warn('hermes: MCP e hooks ligados; abra o Hermes e aceite os hooks do ai-memory');
+    else ok('hermes: MCP e hooks ligados');
   }
   if (agents.includes('openclaude')) {
     const oc = which('openclaude');
     const registered = oc && run(oc, ['mcp', 'get', 'ai-memory']).code === 0;
-    if (memoryAgents.includes('openclaude')) registered ? ok('openclaude: MCP ligado') : bad('openclaude: MCP do ai-memory não registrado');
+    const hooks = hasText(OPENCLAUDE_SETTINGS, 'ai-memory');
+    if (memoryAgents.includes('openclaude')) {
+      if (!registered) bad('openclaude: MCP do ai-memory não registrado');
+      else if (!hooks) bad('openclaude: MCP ligado, mas sem os hooks que gravam as sessões (rode ./install.sh)');
+      else ok('openclaude: MCP e hooks ligados');
+    }
     else if (!choices.memoryAgents) ok(registered ? 'openclaude: MCP ligado' : 'openclaude: sem memória compartilhada');
-    else if (registered) warn('openclaude: tem a memória ligada, mas a instalação escolheu deixá-lo de fora');
+    else if (registered || hooks) warn('openclaude: tem a memória ligada, mas a instalação escolheu deixá-lo de fora');
     else ok('openclaude: sem memória compartilhada (escolha da instalação)');
   }
   for (const p of localProjects().filter((p) => p.aiMemory)) {

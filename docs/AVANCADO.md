@@ -19,18 +19,19 @@ flowchart LR
   repo -- symlink --> O["~/.openclaude/skills<br/>OpenClaude"]
   priv -- symlink --> A & C & O
   mem["ai-memory<br/>127.0.0.1:49374"]
-  CC[Claude Code] & CU[Cursor] -- MCP + hooks --> mem
-  HE[Hermes] & OC[OpenClaude] -- MCP --> mem
+  CC[Claude Code] & CU[Cursor] & OC[OpenClaude] -- MCP + hooks --> mem
+  HE[Hermes] -- MCP + hooks de ferramenta --> mem
 ```
 
 | Agente | Skills | Memória | Serena |
 |---|---|---|---|
 | Claude Code | `~/.claude/skills` | MCP + hooks (captura automática) | MCP, contexto `claude-code` |
 | Cursor | `~/.agents/skills` e também `~/.claude/skills` | MCP + hooks (captura automática) | MCP, contexto `ide` |
-| Hermes | `~/.agents/skills`, via `skills.external_dirs` | só MCP | MCP, contexto `ide` |
-| OpenClaude | `~/.openclaude/skills` | só MCP | MCP, contexto `claude-code` |
+| Hermes | `~/.agents/skills`, via `skills.external_dirs` | MCP + hooks de ferramenta | MCP, contexto `ide` |
+| OpenClaude | `~/.openclaude/skills` | MCP + hooks (captura automática), só se for confiável | MCP, contexto `claude-code` |
 
-No Hermes e no OpenClaude a memória não é capturada sozinha: o agente usa as ferramentas `memory_*` do MCP, e o handoff chega por elas.
+- **OpenClaude**: deriva do Claude Code e lê os mesmos hooks na pasta de config dele. O instalador grava os hooks do Claude Code em `~/.openclaude/settings.json` (com `CLAUDE_CONFIG_DIR=~/.openclaude`). As sessões dele aparecem na memória como `claude-code`. Os hooks também entregam ao OpenClaude o resumo da sessão anterior, por isso só entram se você responder que ele é confiável.
+- **Hermes**: o ai-memory grava as ferramentas que o Hermes usa (`pre_tool_call` e `post_tool_call`), num bloco `hooks:` que o instalador acrescenta ao `~/.hermes/config.yaml`. Na primeira sessão, o Hermes pede para aprovar cada hook; responda sim. As mensagens e o fim da sessão do Hermes ficariam com um plugin de memória da comunidade (`ai-memory-hermes-plugin`), que o glossary não instala. Para o handoff, o Hermes usa as ferramentas `memory_*` do MCP.
 
 ## Rodar as partes separadas
 
@@ -140,8 +141,8 @@ O script:
 |---|---|---|
 | Claude Code | symlinks em `~/.claude/skills`; `~/.claude.json` (MCP `ai-memory` e `serena`); `~/.claude/settings.json` (hooks) | `claude mcp list` ou `/mcp` dentro da sessão; chame uma skill pelo nome, ex.: `/ponytail-review` |
 | Cursor | symlinks em `~/.agents/skills`; `~/.cursor/mcp.json` (`ai-memory` e `serena`, sem apagar os outros servidores); `~/.cursor/hooks.json` | Settings → MCP mostra os dois conectados |
-| Hermes | `~/.hermes/config.yaml` (`skills.external_dirs` e `mcp_servers`) | `hermes mcp test ai-memory`, `hermes mcp test serena`, `hermes skills list` |
-| OpenClaude | symlinks em `~/.openclaude/skills`; `~/.openclaude.json` | `openclaude mcp list`, `openclaude skills list` |
+| Hermes | `~/.hermes/config.yaml` (`skills.external_dirs`, `mcp_servers` e `hooks`) | `hermes mcp test ai-memory`, `hermes mcp test serena`, `hermes hooks doctor`, `hermes skills list` |
+| OpenClaude | symlinks em `~/.openclaude/skills`; `~/.openclaude.json` (MCP); `~/.openclaude/settings.json` (hooks) | `openclaude mcp list`, `openclaude skills list` |
 
 Antes de cada escrita, o arquivo original é copiado para `<arquivo>.glossary-bak-AAAAMMDD-HHMMSS`, na mesma pasta. O `install-mcp`/`install-hooks` do ai-memory também guarda um backup próprio com data.
 
@@ -176,7 +177,9 @@ cd ~/projetos/meu-projeto-salesforce
 
 O `--force` só é exigido quando há uma sessão aberta no projeto. Ele é seguro: a mudança atualiza o apontamento da sessão.
 
-**Importar o histórico antigo**: as conversas que você já teve no projeto (Claude Code no terminal ou no VS Code, Cursor etc.) podem entrar na memória compartilhada. O `./install.sh` faz isso quando você adiciona um projeto. À mão, rode dentro do projeto, depois do workspace criado:
+**Importar o histórico antigo**: o `./install.sh` oferece, uma vez por computador, levar para a memória tudo o que o Claude Code já guardou: as conversas de cada pasta (`~/.claude/projects/*/*.jsonl`) e as memórias dele (`memory/*.md`, que viram páginas duráveis em `notes/claude-memory/`, com a tag `claude-memory`). Cada pasta vai para o workspace do seu `.ai-memory.toml`, então configure os projetos da empresa antes. Para rodar de novo: `node ai-memory/history.mjs` mostra o que encontrou e `--apply` importa; conversas só entram num projeto que ainda não tem nenhuma, e cada memória atualiza a mesma página.
+
+Para um projeto só, rode dentro dele, depois do workspace criado:
 
 ```bash
 ~/Applications/ai-memory/ai-memory backfill --max-sessions 50 --dry-run   # mostra quantas sessões e para onde
