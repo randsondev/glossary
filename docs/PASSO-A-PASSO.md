@@ -29,7 +29,7 @@ As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em
 | **Pasta de um projeto da empresa** | O caminho de cada projeto da empresa, um por vez (ex.: `~/projetos/meu-projeto`). Enter quando acabar. Esses projetos ficam com a memória separada dos pessoais. |
 | **Nome do workspace da empresa** | Um nome curto, em minúsculas (ex.: `minhaempresa`). Só aparece na primeira vez. |
 | **Nomes da empresa para bloquear** | Enter aceita o nome do workspace. Acrescente outros separados por vírgula (ex.: nome de cliente). A trava de commit não deixa esses nomes entrarem no repositório público. Só aparece na primeira vez. |
-| **Dar ao OpenClaude a memória e as skills privadas?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. |
+| **Dar ao OpenClaude a memória e as skills privadas?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. Com `s`, as sessões dele também passam a ser gravadas. |
 | **Instalar o Serena?** | Enter (sim). Só aparece se você tiver o `uv`. |
 | **Levar tudo isso para a memória compartilhada?** | Enter (sim). Aparece uma vez por computador, com a lista de pastas onde você já usou o Claude Code. As conversas e as memórias dele vão para a memória que todos os agentes leem. Adicione antes os projetos da empresa (primeira pergunta), senão eles entram na memória pessoal. Nada é duplicado. |
 | **Pode começar?** | Enter. |
@@ -42,7 +42,7 @@ O instalador também cria o **`glossary-internal`** ao lado do glossary (ex.: `~
 
 ## Depois de instalar
 
-1. Recarregue o VS Code ("Developer: Reload Window") e reinicie o Cursor.
+1. Recarregue o VS Code ("Developer: Reload Window") e reinicie o Cursor. Na primeira vez que abrir o Hermes, ele pergunta se aceita os hooks do ai-memory: responda sim.
 2. Abra uma sessão nova. As skills aparecem pelo nome, ex.: `/ponytail-review`.
 3. Teste a memória: peça algo pequeno no Claude Code numa pasta, feche a sessão, abra o Cursor na mesma pasta e pergunte "o que já foi feito aqui?".
 
@@ -59,7 +59,7 @@ O instalador também cria o **`glossary-internal`** ao lado do glossary (ex.: `~
 
 O histórico que entra é o do Claude Code (terminal e VS Code): as conversas e as memórias que ele guarda por projeto. O histórico de chat do Cursor, do Hermes e do OpenClaude não é importado; as conversas novas deles entram normalmente.
 
-A memória grava sozinha no Claude Code e no Cursor. A página de cada sessão aparece quando a sessão termina (`/exit` ou fechar a aba). O resumo dela entra no começo da próxima sessão na mesma pasta.
+A memória grava sozinha no Claude Code, no Cursor e no OpenClaude (se ele for confiável). No Hermes, grava as ferramentas que ele usa. A página de cada sessão aparece quando a sessão termina (`/exit` ou fechar a aba). O resumo dela entra no começo da próxima sessão na mesma pasta.
 
 ## Outro computador
 

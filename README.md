@@ -24,8 +24,8 @@ O instalador confere os pré-requisitos (git e Node 20+), faz as poucas pergunta
 |---|---|---|---|
 | Claude Code | `~/.claude/skills` | MCP + hooks | MCP, contexto `claude-code` |
 | Cursor | `~/.agents/skills` (e `~/.claude/skills`) | MCP + hooks | MCP, contexto `ide` |
-| Hermes | `~/.agents/skills` via `skills.external_dirs` | só MCP | MCP, contexto `ide` |
-| OpenClaude | `~/.openclaude/skills` | só MCP | MCP, contexto `claude-code` |
+| Hermes | `~/.agents/skills` via `skills.external_dirs` | MCP + hooks de ferramenta | MCP, contexto `ide` |
+| OpenClaude | `~/.openclaude/skills` | MCP + hooks (se for confiável) | MCP, contexto `claude-code` |
 
 ## Estrutura
 

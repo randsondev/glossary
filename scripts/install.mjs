@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { discoverHistory, importHistory, showHistory } from '../ai-memory/history.mjs';
-import { readServiceEnv, setup as aiMemorySetup } from '../ai-memory/setup.mjs';
+import { readServiceEnv, setup as aiMemorySetup, unwireOpenclaudeHooks } from '../ai-memory/setup.mjs';
 import { findSerena, setup as serenaSetup } from '../serena/setup.mjs';
 import { INSTALL_FILE, check } from './check.mjs';
 import { link } from './link.mjs';
@@ -169,6 +169,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     log.info('openclaude: desligando a memória compartilhada');
     runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory']);
   }
+  if (oc) unwireOpenclaudeHooks();
 
   if (serena) {
     log.step('Serena');

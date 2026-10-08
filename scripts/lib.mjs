@@ -150,14 +150,14 @@ export function runLive(cmd, args, { dryRun = false, cwd, env } = {}) {
 
 // Roda capturando a saída: mostra o comando e só imprime o que ele disse se falhar.
 // Para CLIs com saída longa (o OpenClaude imprime um banner a cada comando).
-export function runQuiet(cmd, args, { dryRun = false } = {}) {
+export function runQuiet(cmd, args, { dryRun = false, env } = {}) {
   const shown = [cmd, ...args].map((a) => tilde(a)).map((a) => (/[\s"']/.test(a) ? JSON.stringify(a) : a)).join(' ');
   if (dryRun) {
     log.dry(shown);
     return 0;
   }
   log.info(`$ ${shown}`);
-  const r = run(cmd, args);
+  const r = run(cmd, args, env ? { env: { ...process.env, ...env } } : {});
   if (r.code === 0) log.ok('feito');
   else log.err(`falhou (código ${r.code}): ${(r.stderr || r.stdout).trim().split('\n').slice(-3).join(' | ')}`);
   return r.code;
