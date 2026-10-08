@@ -45,6 +45,7 @@ scripts/sync.mjs                atualiza vendor/ e as versões (o PR semanal usa
 scripts/guard.mjs               trava contra vazamento (pre-commit e CI)
 scripts/port-cursor-commands.mjs, scripts/port-memories.mjs
 ai-memory/setup.mjs             instala, sobe o serviço e liga os agentes
+ai-memory/history.mjs           leva para a memória as conversas e memórias que o Claude Code já guardou
 ai-memory/dedupe.mjs            corrige o histórico importado mais de uma vez
 serena/setup.mjs                ajusta a config do Serena e registra o MCP
 templates/skill/SKILL.md        modelo para skill nova

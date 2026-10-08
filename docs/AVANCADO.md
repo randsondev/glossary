@@ -176,7 +176,9 @@ cd ~/projetos/meu-projeto-salesforce
 
 O `--force` só é exigido quando há uma sessão aberta no projeto. Ele é seguro: a mudança atualiza o apontamento da sessão.
 
-**Importar o histórico antigo**: as conversas que você já teve no projeto (Claude Code no terminal ou no VS Code, Cursor etc.) podem entrar na memória compartilhada. O `./install.sh` faz isso quando você adiciona um projeto. À mão, rode dentro do projeto, depois do workspace criado:
+**Importar o histórico antigo**: o `./install.sh` oferece, uma vez por computador, levar para a memória tudo o que o Claude Code já guardou: as conversas de cada pasta (`~/.claude/projects/*/*.jsonl`) e as memórias dele (`memory/*.md`, que viram páginas duráveis em `notes/claude-memory/`, com a tag `claude-memory`). Cada pasta vai para o workspace do seu `.ai-memory.toml`, então configure os projetos da empresa antes. Para rodar de novo: `node ai-memory/history.mjs` mostra o que encontrou e `--apply` importa; conversas só entram num projeto que ainda não tem nenhuma, e cada memória atualiza a mesma página.
+
+Para um projeto só, rode dentro dele, depois do workspace criado:
 
 ```bash
 ~/Applications/ai-memory/ai-memory backfill --max-sessions 50 --dry-run   # mostra quantas sessões e para onde
