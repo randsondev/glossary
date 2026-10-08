@@ -65,7 +65,7 @@ async function ensureBinary({ dryRun }) {
   if (!uv) die('uv não encontrado (https://docs.astral.sh/uv/). Instale o uv e rode de novo.');
   const msg = current ? `Serena ${current} -> ${version}` : `instalar Serena ${version}`;
   if (!dryRun && !(await confirm(`${msg} com "uv tool install --force ${pkg}==${version}"?`))) return bin;
-  if (runLive(uv, ['tool', 'install', '--force', `${pkg}==${version}`], { dryRun }) !== 0) die('uv tool install falhou');
+  if (runQuiet(uv, ['tool', 'install', '--force', `${pkg}==${version}`], { dryRun }) !== 0) die('uv tool install falhou');
   if (dryRun) return bin || path.join(HOME, '.local', 'bin', 'serena');
   bin = findSerena();
   if (!bin) die('serena instalado, mas fora do PATH; rode "uv tool update-shell" e abra outro terminal');
@@ -114,7 +114,7 @@ async function configure(bin, { dryRun, memories, trusted }) {
   log.step(`Config global (${tilde(CONFIG)})`);
   if (!fs.existsSync(CONFIG)) {
     if (dryRun) log.dry(`${tilde(bin || 'serena')} init (cria a config padrão)`);
-    else if (runLive(bin, ['init']) !== 0) die('serena init falhou');
+    else if (runQuiet(bin, ['init']) !== 0) die('serena init falhou');
   }
   if (!fs.existsSync(CONFIG)) return log.dry('aplicaria os 4 ajustes depois do init');
 
@@ -169,7 +169,7 @@ async function configureProjects(bin, { dryRun }) {
         log.dry(`serena project create ${tilde(p.dir)} ${langs.map((l) => `--language ${l}`).join(' ')}`);
         continue;
       }
-      if (runLive(bin, ['project', 'create', p.dir, ...langs.flatMap((l) => ['--language', l])]) !== 0) log.err('serena project create falhou');
+      if (runQuiet(bin, ['project', 'create', p.dir, ...langs.flatMap((l) => ['--language', l])]) !== 0) log.err('serena project create falhou');
       continue;
     }
     const lines = fs.readFileSync(yml, 'utf8').split('\n');
@@ -295,7 +295,8 @@ export async function setup({ dryRun = false, agents, memories, trusted, uninsta
   if (memories && !['keep', 'off'].includes(memories)) die('--memories aceita keep ou off');
   const bin = await ensureBinary({ dryRun });
   if (!bin && !dryRun) return 1;
-  await configure(bin, { dryRun, memories, trusted: trusted || path.join(HOME, 'projetos', '**') });
+  // Padrão: a pasta onde o glossary foi clonado (ex.: ~/projetos ou ~/Projects), com tudo dentro.
+  await configure(bin, { dryRun, memories, trusted: trusted || path.join(path.dirname(REPO), '**') });
   await configureProjects(bin, { dryRun });
   await wireAgents(bin || 'serena', agents, { dryRun });
 

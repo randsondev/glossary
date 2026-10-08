@@ -38,6 +38,7 @@ link.json                       pastas de destino por agente e exclusões
 install.sh                      instalação guiada (chama scripts/install.mjs)
 glossary.mjs                    roda tudo em sequência (idempotente, --dry-run, --check)
 scripts/check.mjs               confere a instalação inteira, sem alterar nada
+scripts/private.mjs             repositório privado: cria e leva para outro computador (--export/--import)
 scripts/validate.mjs            regras das skills (estritas nas próprias)
 scripts/link.mjs                symlinks nas pastas dos agentes (--unlink desfaz)
 scripts/sync.mjs                atualiza vendor/ e as versões (o PR semanal usa este)
