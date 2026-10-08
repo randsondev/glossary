@@ -171,8 +171,14 @@ export function runWithAnswers(cmd, args, answers, { dryRun = false } = {}) {
     return 0;
   }
   log.info(`$ ${shown}`);
-  const r = spawnSync(cmd, args, { input: answers, stdio: ['pipe', 'inherit', 'inherit'] });
-  return r.error ? 127 : r.status;
+  // A saída fica guardada: quem chama confere o resultado (ex.: checkHermes) e mostra o que importa.
+  const r = spawnSync(cmd, args, { input: answers, encoding: 'utf8' });
+  if (r.error) {
+    log.err(`${cmd}: ${r.error.message}`);
+    return 127;
+  }
+  if (r.status !== 0) log.err(`falhou (código ${r.status}): ${(r.stderr || r.stdout).trim().split('\n').slice(-3).join(' | ')}`);
+  return r.status;
 }
 
 // Confere se o servidor MCP ficou registrado (e habilitado) no Hermes.

@@ -12,7 +12,23 @@ import { parseArgs } from 'node:util';
 import { AGENT_FILES, BIN, MCP_URL, httpStatus, wired } from '../ai-memory/setup.mjs';
 import { CONFIG as SERENA_CONFIG, argsOk, findSerena, readList } from '../serena/setup.mjs';
 import { expectedLinks, linkTarget } from './link.mjs';
-import { CONFIG_DIR, HOME, REPO, findClaudeBinary, isMain, localProjects, log, readJSON, resolveAgents, run, tilde, which } from './lib.mjs';
+import {
+  CONFIG_DIR,
+  HOME,
+  REPO,
+  extraRoots,
+  findClaudeBinary,
+  isMain,
+  listSkills,
+  localProjects,
+  log,
+  readJSON,
+  resolveAgents,
+  run,
+  tilde,
+  which,
+} from './lib.mjs';
+import { DENY_FILE } from './private.mjs';
 
 export const INSTALL_FILE = path.join(CONFIG_DIR, 'install.json');
 
@@ -45,6 +61,11 @@ export async function check({ agents } = {}) {
     if (missing) bad(`${target.dir}: ${missing} de ${wanted.size} skill(s) sem link (rode: node scripts/link.mjs)`);
     else ok(`${target.dir}: ${wanted.size} skill(s)`);
   }
+  const roots = extraRoots();
+  for (const r of roots)
+    fs.existsSync(r.dir) ? ok(`privadas: ${tilde(r.dir)} (${listSkills(r.dir).length} skill(s))`) : bad(`privadas: ${tilde(r.dir)} não existe (rode ./install.sh)`);
+  if (!roots.length) warn('sem repositório privado (rode ./install.sh)');
+  if (!fs.existsSync(DENY_FILE)) warn(`sem a lista de nomes da empresa (${tilde(DENY_FILE)}): a trava de commit só pega os padrões genéricos (rode ./install.sh)`);
   if (agents.includes('hermes')) {
     const hermes = which('hermes');
     const r = hermes ? run(hermes, ['config', 'get', 'skills.external_dirs', '--json']) : { stdout: '' };

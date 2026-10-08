@@ -119,7 +119,7 @@ function installBinary({ dryRun }) {
 function initData({ dryRun }) {
   log.step('Pasta de dados');
   if (fs.existsSync(path.join(paths.data, 'config.toml'))) return log.ok(`já existe: ${tilde(paths.data)}`);
-  if (runLive(BIN, ['init'], { dryRun }) !== 0) die('ai-memory init falhou');
+  if (runQuiet(BIN, ['init'], { dryRun }) !== 0) die('ai-memory init falhou');
 }
 
 // ---------- 2. LLM ----------
@@ -281,7 +281,7 @@ function startService(env, { dryRun, binaryChanged }) {
   fs.mkdirSync(path.dirname(paths.unit), { recursive: true });
   fs.writeFileSync(paths.unit, renderUnit());
   log.ok(`${tilde(paths.envFile)} (chmod 600) e ${tilde(paths.unit)}`);
-  const sc = (args) => runLive('systemctl', ['--user', ...args]);
+  const sc = (args) => runQuiet('systemctl', ['--user', ...args]);
   if (sc(['daemon-reload']) !== 0 || sc(['enable', 'ai-memory']) !== 0 || sc(['restart', 'ai-memory']) !== 0) {
     log.warn('systemd --user indisponível. Rode o servidor à mão em outro terminal:');
     log.info(`set -a; . ${tilde(paths.envFile)}; set +a; ${tilde(BIN)} serve --transport http --enable-web`);
@@ -324,7 +324,7 @@ export function wired(agent, files) {
 
 async function wireAgents(agents, { dryRun, binaryChanged }) {
   log.step('Ligar os agentes ao ai-memory');
-  const ai = (args) => runLive(BIN, args, { dryRun });
+  const ai = (args) => runQuiet(BIN, args, { dryRun });
   const files = AGENT_FILES;
   for (const [agent, client] of [['claude', 'claude-code'], ['cursor', 'cursor']]) {
     if (!agents.includes(agent)) continue;

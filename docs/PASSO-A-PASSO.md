@@ -28,12 +28,15 @@ As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em
 |---|---|
 | **Pasta de um projeto da empresa** | O caminho de cada projeto da empresa, um por vez (ex.: `~/projetos/meu-projeto`). Enter quando acabar. Esses projetos ficam com a memória separada dos pessoais. |
 | **Nome do workspace da empresa** | Um nome curto, em minúsculas (ex.: `minhaempresa`). Só aparece na primeira vez. |
-| **Ligar a memória no OpenClaude?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. |
+| **Nomes da empresa para bloquear** | Enter aceita o nome do workspace. Acrescente outros separados por vírgula (ex.: nome de cliente). A trava de commit não deixa esses nomes entrarem no repositório público. Só aparece na primeira vez. |
+| **Dar ao OpenClaude a memória e as skills privadas?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. |
 | **Instalar o Serena?** | Enter (sim). Só aparece se você tiver o `uv`. |
 | **Importar o histórico?** | Enter (sim). As conversas antigas dos projetos que você acabou de adicionar entram na memória. Só aparece quando você adiciona um projeto. |
 | **Pode começar?** | Enter. |
 
 No fim aparece uma conferência. O esperado é **"tudo certo"**.
+
+O instalador também cria o **`glossary-internal`** ao lado do glossary (ex.: `~/projetos/glossary-internal`). É o seu repositório privado, para skills com dados da empresa. Ele fica só nesta máquina: não tem remote e não vai para servidor nenhum.
 
 > Rode o instalador **antes** de abrir um agente num projeto da empresa que você ainda não configurou. Assim as conversas já caem no lugar certo.
 
@@ -50,9 +53,21 @@ No fim aparece uma conferência. O esperado é **"tudo certo"**.
 | Conferir se está tudo certo | `node glossary.mjs --check` |
 | Atualizar skills e ferramentas | `git pull && ./install.sh --yes` |
 | Adicionar um projeto da empresa | `./install.sh` e informe a pasta nova |
+| Levar as skills privadas e a config para outro computador | `./install.sh --export` (veja abaixo) |
 | Ver o que a memória guardou | abra http://127.0.0.1:49374/web |
 
 A memória grava sozinha no Claude Code e no Cursor. A página de cada sessão aparece quando a sessão termina (`/exit` ou fechar a aba). O resumo dela entra no começo da próxima sessão na mesma pasta.
+
+## Outro computador
+
+O `git clone` traz só o que é público. As skills privadas, a lista de nomes da empresa e os projetos configurados ficam só na máquina onde foram criados. Para levar:
+
+1. No computador antigo: `./install.sh --export`. Isso gera `~/glossary-privado.tar.gz`.
+2. Leve o arquivo por pendrive ou pela rede local (`scp`). **Nunca** por nuvem, e-mail ou mensageiro: ele tem dados da empresa.
+3. No computador novo, depois do `git clone`: `./install.sh --import ~/glossary-privado.tar.gz`. Os projetos da empresa entram se já estiverem clonados na mesma pasta relativa (ex.: `~/projetos/x` no Mac vira `~/Projects/x` se o glossary estiver em `~/Projects`).
+4. Apague o arquivo nos dois computadores.
+
+A memória (o histórico das sessões) não vai junto: cada computador tem a sua.
 
 ## Se algo der errado
 

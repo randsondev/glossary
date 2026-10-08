@@ -5,7 +5,10 @@
 //   ./install.sh                 (chama este script)
 //   ./install.sh --yes           aceita as respostas padrão, sem perguntar
 //   ./install.sh --agents claude,cursor
+//   ./install.sh --export        empacota o repositório privado e a config local (para outro computador)
+//   ./install.sh --import <arq>  desempacota esse pacote aqui e segue com a instalação
 //
+// Numa máquina nova, cria o repositório privado (glossary-internal, só local) ao lado do glossary.
 // Pode rodar de novo quando quiser: o que já está certo não é refeito.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,12 +17,14 @@ import { BIN, readServiceEnv, setup as aiMemorySetup } from '../ai-memory/setup.
 import { findSerena, setup as serenaSetup } from '../serena/setup.mjs';
 import { INSTALL_FILE, check } from './check.mjs';
 import { link } from './link.mjs';
+import { DENY_FILE, exportPrivate, importPrivate, setupPrivateRepo, writeDenyTerms } from './private.mjs';
 import {
   CONFIG_DIR,
   REPO,
   ask,
   die,
   expandHome,
+  extraRoots,
   isMain,
   localProjects,
   log,
@@ -27,6 +32,7 @@ import {
   resolveAgents,
   run,
   runLive,
+  runQuiet,
   setAssumeYes,
   tilde,
   which,
@@ -36,7 +42,7 @@ import { validate } from './validate.mjs';
 
 const PROJECTS_FILE = path.join(CONFIG_DIR, 'projects.json');
 
-export async function install({ yes = false, agents: agentsFlag } = {}) {
+export async function install({ yes = false, agents: agentsFlag, importFile } = {}) {
   const yesNo = async (question, def) => {
     if (yes) return def;
     const a = (await ask(`${question} ${def ? '[S/n]' : '[s/N]'}`)).toLowerCase();
@@ -44,6 +50,7 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   };
 
   log.step('Instalação do glossary');
+  if (importFile) importPrivate(importFile);
   // Numa nova rodada, as respostas padrão repetem as escolhas anteriores.
   const previous = readJSON(INSTALL_FILE, null);
   const agents = resolveAgents(agentsFlag);
@@ -90,11 +97,20 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
     log.ok(`${tilde(dir)} -> workspace "${workspace}"${entry.serena ? ' (Salesforce: Serena com typescript)' : ''}`);
   }
 
+  // Termos da empresa para a trava de commit: ficam só nesta máquina, nunca no repositório.
+  let denyTerms = [];
+  if (!fs.existsSync(DENY_FILE)) {
+    log.info('A trava de commit impede que nomes da empresa entrem no repositório público. A lista fica só nesta máquina.');
+    const def = workspace || '';
+    const answer = yes ? def : await ask(`Nomes da empresa para bloquear, separados por vírgula${def ? ` [${def}]` : ' (Enter para pular)'}:`, def);
+    denyTerms = answer.split(',').map((t) => t.trim()).filter(Boolean);
+  }
+
   let memoryAgents = agents;
   if (agents.includes('openclaude')) {
-    log.info('O OpenClaude costuma usar modelos de outros provedores. Ligado à memória, ele pode ler o histórico de todos os agentes.');
+    log.info('O OpenClaude costuma usar modelos de outros provedores. Com acesso, ele lê o histórico de todos os agentes e as skills privadas.');
     const before = Boolean(previous?.memoryAgents?.includes('openclaude'));
-    const on = await yesNo('Ligar a memória compartilhada no OpenClaude? Só se ele usar um provedor confiável.', before);
+    const on = await yesNo('Dar ao OpenClaude a memória compartilhada e as skills privadas? Só se ele usar um provedor confiável.', before);
     if (!on) memoryAgents = agents.filter((a) => a !== 'openclaude');
   }
 
@@ -117,14 +133,19 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   log.info(`memória compartilhada (ai-memory) em: ${memoryAgents.join(', ')}`);
   if (company.length) log.info(`workspace separado em: ${company.map(tilde).join(', ')}`);
   log.info(`Serena: ${serena ? 'sim' : 'não'}`);
+  if (!extraRoots().length) log.info('criar o repositório privado (só nesta máquina) ao lado do glossary');
+  if (denyTerms.length) log.info(`trava de commit com ${denyTerms.length} nome(s) da empresa`);
   if (backfill) log.info(`importar o histórico de: ${added.map(tilde).join(', ')}`);
   if (!(await yesNo('Pode começar?', true))) return 1;
   setAssumeYes(true);
 
   // ---------- execução ----------
   if (projects.projects.length) writeJSON(PROJECTS_FILE, projects);
+  if (denyTerms.length) writeDenyTerms(denyTerms);
 
   log.step('Skills');
+  // Sem o OpenClaude nesta rodada, a pergunta não foi feita: a escolha anterior fica como está.
+  setupPrivateRepo({ openclaude: agents.includes('openclaude') ? memoryAgents.includes('openclaude') : undefined });
   if (validate() !== 0) die('há skills inválidas; corrija antes de continuar (node scripts/validate.mjs)');
   if ((await link({ agents, quiet: true })) !== 0) die('o link das skills falhou');
   if (run('git', ['-C', REPO, 'config', '--get', 'core.hooksPath']).stdout.trim() !== '.githooks') {
@@ -135,6 +156,12 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
   log.step('Memória compartilhada');
   const llm = readServiceEnv().AI_MEMORY_LLM_PROVIDER ? undefined : 'none';
   if ((await aiMemorySetup({ agents: memoryAgents, llm, summary: false })) !== 0) die('a instalação do ai-memory falhou; veja as mensagens acima');
+  // "Não" para o OpenClaude também tira a memória que uma rodada anterior tinha ligado nele.
+  const oc = agents.includes('openclaude') && !memoryAgents.includes('openclaude') && which('openclaude');
+  if (oc && run(oc, ['mcp', 'get', 'ai-memory']).code === 0) {
+    log.info('openclaude: desligando a memória compartilhada');
+    runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory']);
+  }
 
   if (serena) {
     log.step('Serena');
@@ -161,6 +188,9 @@ export async function install({ yes = false, agents: agentsFlag } = {}) {
 }
 
 if (isMain(import.meta.url)) {
-  const { values } = parseArgs({ options: { yes: { type: 'boolean' }, agents: { type: 'string' } } });
-  process.exit(await install({ yes: values.yes, agents: values.agents }));
+  const { values } = parseArgs({
+    options: { yes: { type: 'boolean' }, agents: { type: 'string' }, export: { type: 'boolean' }, import: { type: 'string' } },
+  });
+  if (values.export) process.exit(exportPrivate());
+  process.exit(await install({ yes: values.yes, agents: values.agents, importFile: values.import }));
 }

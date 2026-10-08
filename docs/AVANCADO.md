@@ -127,7 +127,7 @@ O script:
    - `project_serena_folder_location` vai para `~/.serena/projects/<pasta>/.serena`. O padrão do Serena cria `.serena/` **dentro de cada repositório**; centralizar mantém o `git status` limpo. Projetos de pastas com o mesmo nome compartilham a mesma pasta central.
    - `web_dashboard_open_on_launch: false`. O painel continua em `http://127.0.0.1:24282/dashboard/`, mas não abre uma aba a cada sessão.
    - `base_modes` ganha `no-memories` se você aceitar. A memória fica com o ai-memory. Para escolher sem pergunta: `--memories off` ou `--memories keep`.
-   - `trusted_project_path_patterns` recebe `~/projetos/**` (outro lugar: `--trusted "<glob>"`).
+   - `trusted_project_path_patterns` recebe a pasta onde o glossary foi clonado, por exemplo `~/projetos/**` (outro lugar: `--trusted "<glob>"`).
 3. Registra o MCP em cada agente, com o caminho absoluto do binário. Apps de interface gráfica no macOS não herdam o `PATH` do terminal. Se o agente já tiver um `serena` sem `--project-from-cwd` ou com outro contexto, o script mostra o registro atual e pergunta antes de trocar.
 
 **Linguagens**: Python, TypeScript/JavaScript, Java, Go, Rust, C#, PHP, Ruby, Kotlin e muitas outras ([lista](https://oraios.github.io/serena/01-about/020_programming-languages.html)). **Não existe language server de Apex**: num projeto Salesforce, o Serena só ajuda com o JavaScript dos LWC. Para esses projetos, fixe `typescript` (ver "Projetos da empresa"); o instalador faz isso sozinho quando acha um `sfdx-project.json`.
@@ -240,17 +240,21 @@ git add skills && git commit -m "Descreve a mudança"
 git push -u origin minha-mudanca     # depois abra o PR no GitHub
 ```
 
-**Repo privado do time**: crie a lista de raízes extras em `~/.config/glossary/roots.json`. As skills de lá entram no link e no validate como as do glossary.
-
-```json
-["~/projetos/skills-do-time/skills"]
-```
-
-Skills com regra ou acesso da empresa não devem chegar a um agente que use modelo de terceiros. Para limitar uma raiz a alguns agentes, use a forma com `agents`. A skill só entra numa pasta se **todos** os agentes que leem aquela pasta estiverem na lista. No exemplo abaixo, nada dessa raiz vai para `~/.openclaude/skills`:
+**Repositório privado**: o `./install.sh` cria o `glossary-internal` ao lado do glossary (só local, `git init` sem remote) e registra a pasta `skills/` dele em `~/.config/glossary/roots.json`. As skills de lá entram no link e no validate como as do glossary. Para outra pasta, ou mais de uma, edite o `roots.json`:
 
 ```json
 [{ "dir": "~/projetos/skills-do-time/skills", "agents": ["claude", "cursor", "hermes"] }]
 ```
+
+Skills com regra ou acesso da empresa não devem chegar a um agente que use modelo de terceiros. A skill só entra numa pasta se **todos** os agentes que leem aquela pasta estiverem em `agents`. O instalador ajusta essa lista a cada rodada pela resposta sobre o OpenClaude: com "não", nada das raízes privadas vai para `~/.openclaude/skills`.
+
+**Outro computador**: `./install.sh --export` gera `~/glossary-privado.tar.gz` (chmod 600) com os repositórios privados inteiros (com o histórico do git), o `guard-deny.txt` e o `projects.json`. O `install.json` fica de fora, porque os agentes podem ser outros. No outro computador, `./install.sh --import <arquivo>`:
+
+- põe cada repositório ao lado do glossary; um `glossary-internal` vazio criado pelo instalador é substituído, e qualquer outro que já exista é renomeado para `<pasta>.antes-<data>`;
+- junta os termos da trava aos que já existirem;
+- refaz o caminho dos projetos da empresa a partir da pasta do glossary e adiciona só os que já existem nesta máquina.
+
+O pacote tem dados da empresa: leve por pendrive ou `scp` e apague depois.
 
 ## Desfazer
 
