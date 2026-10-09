@@ -15,6 +15,7 @@ import {
   HERMES_ALLOWLIST,
   MCP_URL,
   OPENCLAUDE_SETTINGS,
+  codexHooksTrusted,
   hasText,
   hermesHooksWired,
   httpStatus,
@@ -45,8 +46,8 @@ export const INSTALL_FILE = path.join(CONFIG_DIR, 'install.json');
 export async function check({ agents } = {}) {
   const choices = readJSON(INSTALL_FILE, {});
   agents ||= choices.agents || resolveAgents();
-  // Sem escolha registrada, vale o padrão do instalador: o OpenClaude fica fora da memória.
-  const memoryAgents = (choices.memoryAgents || agents.filter((a) => a !== 'openclaude')).filter((a) => agents.includes(a));
+  // Sem escolha registrada, vale o padrão do instalador: OpenClaude e Codex ficam fora da memória.
+  const memoryAgents = (choices.memoryAgents || agents.filter((a) => !['openclaude', 'codex'].includes(a))).filter((a) => agents.includes(a));
   const sources = readJSON(path.join(REPO, 'sources.json'));
   let errors = 0;
   let warnings = 0;
@@ -93,10 +94,15 @@ export async function check({ agents } = {}) {
   const status = await httpStatus(MCP_URL);
   if (status === 405) ok(`servidor no ar (${MCP_URL})`);
   else bad(`servidor fora do ar (${MCP_URL} respondeu ${status || 'nada'})`);
-  for (const agent of ['claude', 'cursor']) {
-    if (!memoryAgents.includes(agent)) continue;
-    if (wired(agent, AGENT_FILES[agent])) ok(`${agent}: MCP e hooks ligados`);
-    else bad(`${agent}: MCP ou hooks do ai-memory faltando`);
+  for (const agent of ['claude', 'cursor', 'codex']) {
+    if (!memoryAgents.includes(agent)) {
+      if (agent === 'codex' && agents.includes('codex') && choices.memoryAgents && wired(agent, AGENT_FILES[agent]))
+        warn('codex: tem a memória ligada, mas a instalação escolheu deixá-lo de fora');
+      continue;
+    }
+    if (!wired(agent, AGENT_FILES[agent])) bad(`${agent}: MCP ou hooks do ai-memory faltando`);
+    else if (agent === 'codex' && !codexHooksTrusted()) warn('codex: MCP e hooks ligados; abra o Codex e escolha "Trust all and continue" nos hooks');
+    else ok(`${agent}: MCP e hooks ligados`);
   }
   if (memoryAgents.includes('hermes')) {
     const hermes = which('hermes');
@@ -181,11 +187,11 @@ function serenaRegistration(agent) {
     if (!entry) return 'MCP do Serena não registrado';
     return argsOk((entry.args || []).join(' '), agent) || 'Serena registrado com outros argumentos';
   }
-  const cli = agent === 'claude' ? findClaudeBinary() : which('openclaude');
+  const cli = agent === 'claude' ? findClaudeBinary() : which(agent);
   if (!cli) return null;
   const r = run(cli, ['mcp', 'get', 'serena']);
   if (r.code !== 0) return 'MCP do Serena não registrado';
-  const args = /^\s*Args:\s*(.*)$/m.exec(r.stdout)?.[1]?.trim() || '';
+  const args = /^\s*Args:\s*(.*)$/im.exec(r.stdout)?.[1]?.trim() || '';
   return argsOk(args, agent) || 'Serena registrado com outros argumentos';
 }
 

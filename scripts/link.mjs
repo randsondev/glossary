@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  CODEX_POLICY_FILE,
   CONFIG_DIR,
   REPO,
   backupFile,
@@ -17,6 +18,7 @@ import {
   isMain,
   listSkills,
   log,
+  needsCodexPolicy,
   readJSON,
   resolveAgents,
   run,
@@ -24,6 +26,7 @@ import {
   skillRoots,
   tilde,
   which,
+  writeCodexPolicy,
   writeJSON,
 } from './lib.mjs';
 
@@ -78,6 +81,14 @@ export async function link({ dryRun = false, agents, noClaudeDir = false, unlink
   for (const r of roots.filter((r) => r.extra && !fs.existsSync(r.dir))) log.warn(`raiz do roots.json não existe: ${r.label}`);
 
   const { byName, dupes } = collectSkills(roots.filter((r) => fs.existsSync(r.dir)));
+  // Skills próprias (públicas e privadas) que só rodam quando chamadas pelo nome ganham a regra do Codex.
+  if (!dryRun && !unlink)
+    for (const root of roots.filter((r) => r.own && fs.existsSync(r.dir)))
+      for (const skill of listSkills(root.dir))
+        if (needsCodexPolicy(skill.dir)) {
+          writeCodexPolicy(skill.dir);
+          log.info(`${root.label}/${skill.name}: ${CODEX_POLICY_FILE} (o Codex não roda sozinho)`);
+        }
   if (dupes.length && !unlink) {
     log.err('nomes repetidos entre raízes; nada foi alterado:');
     for (const d of dupes) log.info(d);
