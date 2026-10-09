@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Confere a instalação inteira e diz o que falta. Não altera nada.
 //
-//   node scripts/check.mjs [--agents claude,cursor,hermes,openclaude]
+//   node scripts/check.mjs [--agents claude,cursor,hermes,openclaude,codex]
 //   node glossary.mjs --check
 //
 // Usa as escolhas gravadas pelo install (~/.config/glossary/install.json), por exemplo

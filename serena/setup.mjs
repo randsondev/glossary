@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Ajusta o Serena (versão fixada no sources.json) e registra o MCP nos agentes.
 //
-//   node serena/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude]
+//   node serena/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude,codex]
 //                         [--memories keep|off] [--trusted "<glob>"]
 //   node serena/setup.mjs --uninstall [--dry-run]   (remove o MCP dos agentes; config e projetos ficam)
 //

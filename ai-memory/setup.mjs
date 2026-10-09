@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Instala o ai-memory (versão fixada no sources.json), sobe o serviço local e liga os agentes.
 //
-//   node ai-memory/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude]
+//   node ai-memory/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude,codex]
 //                            [--llm none|anthropic|anthropic-oauth] [--model claude-haiku-4-5]
 //   node ai-memory/setup.mjs --uninstall [--dry-run]   (tira a ligação dos agentes e para o serviço; os dados ficam)
 //
