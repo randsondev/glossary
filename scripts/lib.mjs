@@ -21,7 +21,9 @@ export function isMain(url) {
   }
 }
 
-export const AGENTS = ['claude', 'cursor', 'hermes', 'openclaude'];
+export const AGENTS = ['claude', 'cursor', 'hermes', 'openclaude', 'codex'];
+// Pasta de config do Codex (CODEX_HOME muda o padrão ~/.codex).
+export const CODEX_HOME = process.env.CODEX_HOME ? path.resolve(expandHome(process.env.CODEX_HOME)) : path.join(HOME, '.codex');
 
 // ---------- saída ----------
 
@@ -240,6 +242,7 @@ export function detectAgents() {
   if (which('cursor') || exists(path.join(HOME, '.cursor'))) found.push('cursor');
   if (which('hermes') || exists(path.join(HOME, '.hermes'))) found.push('hermes');
   if (which('openclaude') || exists(path.join(HOME, '.openclaude'))) found.push('openclaude');
+  if (which('codex') || exists(CODEX_HOME)) found.push('codex');
   return found;
 }
 
@@ -291,6 +294,22 @@ export function skillRoots({ includeExtra = true } = {}) {
   if (includeExtra)
     for (const { dir, agents } of extraRoots()) roots.push({ label: tilde(dir), dir, own: true, extra: true, agents });
   return roots;
+}
+
+// O Codex ignora "disable-model-invocation" do frontmatter: a regra dele fica em agents/openai.yaml.
+// Sem esse arquivo, o Codex pode rodar sozinho uma skill feita para só rodar quando chamada pelo nome.
+export const CODEX_POLICY_FILE = 'agents/openai.yaml';
+export const CODEX_POLICY_TEXT = 'policy:\n  allow_implicit_invocation: false\n';
+
+export function needsCodexPolicy(skillDir) {
+  const fm = parseFrontmatter(fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8'));
+  return String(fm?.data['disable-model-invocation']) === 'true' && !fs.existsSync(path.join(skillDir, CODEX_POLICY_FILE));
+}
+
+export function writeCodexPolicy(skillDir) {
+  const file = path.join(skillDir, CODEX_POLICY_FILE);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, CODEX_POLICY_TEXT);
 }
 
 // Pastas com SKILL.md diretamente dentro da raiz.

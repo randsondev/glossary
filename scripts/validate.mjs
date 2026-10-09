@@ -9,7 +9,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { REPO, hashDir, isMain, listSkills, log, parseFrontmatter, readJSON, run, skillRoots, which } from './lib.mjs';
+import {
+  CODEX_POLICY_FILE,
+  REPO,
+  hashDir,
+  isMain,
+  listSkills,
+  log,
+  needsCodexPolicy,
+  parseFrontmatter,
+  readJSON,
+  run,
+  skillRoots,
+  which,
+} from './lib.mjs';
 
 const SPEC_FIELDS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
 const EXTRA_FIELDS = ['disable-model-invocation', 'argument-hint'];
@@ -77,6 +90,9 @@ export function validate({ useSkillsRef = false, includeExtra = true } = {}) {
       if (seen.has(skill.name)) error(`nome repetido: ${where} e ${seen.get(skill.name)}`);
       else seen.set(skill.name, where);
       for (const p of checkSkill(skill)) (root.own ? error : warn)(`${where}: ${p}`);
+      // Só nas skills do repositório: nas raízes privadas o link.mjs cria o arquivo sozinho.
+      if (root.label === 'skills' && needsCodexPolicy(skill.dir))
+        error(`${where}: falta ${CODEX_POLICY_FILE} (o Codex ignora disable-model-invocation); rode node scripts/link.mjs`);
       if (useSkillsRef && root.own) {
         const ref = skillsRef(skill);
         if (ref === null) refMissing = true;

@@ -31,24 +31,27 @@ function writePrivate(file, text) {
   fs.chmodSync(file, 0o600);
 }
 
-// Agentes que podem receber dados da empresa: o OpenClaude só entra se for confiável.
-const trustedAgents = (openclaude) => (openclaude ? AGENTS : AGENTS.filter((a) => a !== 'openclaude'));
+// Agentes que mandam o texto das skills para modelos de fora do dia a dia: só entram se o usuário
+// disse que são confiáveis (trust[agent] true). Sem resposta, vale o que já está gravado em current.
+const OPTIONAL = ['openclaude', 'codex'];
+const wantedAgents = (trust, current) => AGENTS.filter((a) => !OPTIONAL.includes(a) || (trust[a] ?? (current || []).includes(a)));
 
 // Garante um repositório privado registrado no roots.json. Numa máquina nova, cria um vazio.
-// openclaude: true/false aplica a resposta da instalação; undefined mantém o que já está gravado.
-export function setupPrivateRepo({ openclaude } = {}) {
+// trust: { openclaude, codex }, true/false aplica a resposta da instalação; undefined mantém o gravado.
+export function setupPrivateRepo({ trust = {} } = {}) {
   const roots = extraRoots();
-  const agents = trustedAgents(Boolean(openclaude));
   if (roots.length) {
     for (const r of roots.filter((r) => !fs.existsSync(r.dir))) {
       fs.mkdirSync(r.dir, { recursive: true });
       log.warn(`${tilde(r.dir)} não existia; criei a pasta vazia`);
     }
-    // A resposta sobre o OpenClaude vale para todas as raízes privadas desta máquina.
+    // As respostas valem para todas as raízes privadas desta máquina.
     const key = (list) => [...(list || AGENTS)].sort().join(',');
-    if (openclaude !== undefined && roots.some((r) => key(r.agents) !== key(agents))) {
-      writeJSON(ROOTS_FILE, roots.map((r) => ({ dir: tilde(r.dir), agents })));
-      log.ok(`skills privadas ${openclaude ? 'também no OpenClaude' : 'fora do OpenClaude'}`);
+    const next = roots.map((r) => ({ dir: tilde(r.dir), agents: wantedAgents(trust, r.agents || AGENTS) }));
+    if (roots.some((r, i) => key(r.agents) !== key(next[i].agents))) {
+      writeJSON(ROOTS_FILE, next);
+      for (const a of OPTIONAL.filter((a) => trust[a] !== undefined))
+        log.ok(`skills privadas ${trust[a] ? 'também no' : 'fora do'} ${a === 'codex' ? 'Codex' : 'OpenClaude'}`);
     }
     return;
   }
@@ -56,7 +59,7 @@ export function setupPrivateRepo({ openclaude } = {}) {
   fs.mkdirSync(skills, { recursive: true });
   if (!fs.existsSync(path.join(PRIVATE_DIR, 'README.md'))) fs.writeFileSync(path.join(PRIVATE_DIR, 'README.md'), README);
   if (!fs.existsSync(path.join(PRIVATE_DIR, '.git'))) run('git', ['init', '-q', PRIVATE_DIR]);
-  writeJSON(ROOTS_FILE, [{ dir: tilde(skills), agents }]);
+  writeJSON(ROOTS_FILE, [{ dir: tilde(skills), agents: wantedAgents(trust, []) }]);
   log.ok(`${tilde(PRIVATE_DIR)}: repositório privado criado (só nesta máquina)`);
 }
 

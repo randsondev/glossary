@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Instala o ai-memory (versão fixada no sources.json), sobe o serviço local e liga os agentes.
 //
-//   node ai-memory/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude]
+//   node ai-memory/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude,codex]
 //                            [--llm none|anthropic|anthropic-oauth] [--model claude-haiku-4-5]
 //   node ai-memory/setup.mjs --uninstall [--dry-run]   (tira a ligação dos agentes e para o serviço; os dados ficam)
 //
@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  CODEX_HOME,
   HOME,
   REPO,
   ask,
@@ -60,6 +61,8 @@ export const BIN = path.join(paths.install, 'ai-memory');
 export const AGENT_FILES = {
   claude: [path.join(HOME, '.claude.json'), path.join(HOME, '.claude', 'settings.json')],
   cursor: [path.join(HOME, '.cursor', 'mcp.json'), path.join(HOME, '.cursor', 'hooks.json')],
+  // O Codex guarda o MCP no config.toml (TOML) e os hooks no hooks.json.
+  codex: [path.join(CODEX_HOME, 'config.toml'), path.join(CODEX_HOME, 'hooks.json')],
 };
 // O OpenClaude deriva do Claude Code e lê os mesmos hooks, na pasta de config dele.
 export const OPENCLAUDE_SETTINGS = path.join(HOME, '.openclaude', 'settings.json');
@@ -323,10 +326,16 @@ async function waitHealthy(seconds = 30) {
 // MCP registrado e algum hook chamando o ai-memory: o agente já está ligado.
 export function wired(agent, files) {
   const [mcpFile, hooksFile] = files;
-  const mcp = readJSON(mcpFile, {});
   const hooks = fs.existsSync(hooksFile) ? fs.readFileSync(hooksFile, 'utf8') : '';
-  return Boolean(mcp.mcpServers?.['ai-memory']) && hooks.includes('ai-memory');
+  const mcp =
+    agent === 'codex'
+      ? /^\[mcp_servers\.(ai-memory|"ai-memory")\]/m.test(fs.existsSync(mcpFile) ? fs.readFileSync(mcpFile, 'utf8') : '')
+      : Boolean(readJSON(mcpFile, {}).mcpServers?.['ai-memory']);
+  return mcp && hooks.includes('ai-memory');
 }
+
+// O Codex pede para revisar cada hook novo e guarda a aprovação (trusted_hash) no config.toml.
+export const codexHooksTrusted = () => hasText(AGENT_FILES.codex[0], 'trusted_hash');
 
 // Hooks de ferramenta do Hermes: o ai-memory só imprime o bloco YAML, e o glossary acrescenta no
 // config.yaml. As mensagens e o fim da sessão ficariam com um plugin de memória do Hermes, que não
@@ -379,11 +388,12 @@ function unwireHermesHooks(hermes, { dryRun }) {
   log.ok('hermes: hooks do ai-memory removidos');
 }
 
-// Tira do OpenClaude os hooks do ai-memory e mantém os outros hooks que existirem.
-export function unwireOpenclaudeHooks({ dryRun = false } = {}) {
-  if (!hasText(OPENCLAUDE_SETTINGS, 'ai-memory')) return;
-  if (dryRun) return log.dry(`tiraria os hooks do ai-memory de ${tilde(OPENCLAUDE_SETTINGS)}`);
-  const settings = readJSON(OPENCLAUDE_SETTINGS, {});
+// Tira os hooks do ai-memory de um arquivo no formato do Claude Code (settings.json, hooks.json do
+// Codex) e mantém os outros hooks que existirem.
+function unwireHooksFile(file, label, { dryRun = false } = {}) {
+  if (!hasText(file, 'ai-memory')) return;
+  if (dryRun) return log.dry(`tiraria os hooks do ai-memory de ${tilde(file)}`);
+  const settings = readJSON(file, {});
   for (const [event, groups] of Object.entries(settings.hooks || {})) {
     const kept = groups
       .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !String(h.command || '').includes('ai-memory')) }))
@@ -392,16 +402,25 @@ export function unwireOpenclaudeHooks({ dryRun = false } = {}) {
     else delete settings.hooks[event];
   }
   if (settings.hooks && !Object.keys(settings.hooks).length) delete settings.hooks;
-  backupFile(OPENCLAUDE_SETTINGS);
-  writeJSON(OPENCLAUDE_SETTINGS, settings);
-  log.ok('openclaude: hooks do ai-memory removidos');
+  backupFile(file);
+  writeJSON(file, settings);
+  log.ok(`${label}: hooks do ai-memory removidos`);
+}
+
+export const unwireOpenclaudeHooks = (opts) => unwireHooksFile(OPENCLAUDE_SETTINGS, 'openclaude', opts);
+
+// Desliga o ai-memory no Codex: MCP (pelo CLI dele) e hooks. A aprovação dos hooks fica no config.toml.
+export function unwireCodex({ dryRun = false } = {}) {
+  const codex = which('codex');
+  if (codex && run(codex, ['mcp', 'get', 'ai-memory']).code === 0) runQuiet(codex, ['mcp', 'remove', 'ai-memory'], { dryRun });
+  unwireHooksFile(AGENT_FILES.codex[1], 'codex', { dryRun });
 }
 
 async function wireAgents(agents, { dryRun, binaryChanged }) {
   log.step('Ligar os agentes ao ai-memory');
   const ai = (args) => runQuiet(BIN, args, { dryRun });
   const files = AGENT_FILES;
-  for (const [agent, client] of [['claude', 'claude-code'], ['cursor', 'cursor']]) {
+  for (const [agent, client] of [['claude', 'claude-code'], ['cursor', 'cursor'], ['codex', 'codex']]) {
     if (!agents.includes(agent)) continue;
     if (!binaryChanged && wired(agent, files[agent])) {
       log.ok(`${agent}: MCP e hooks do ai-memory já ligados`);
@@ -411,6 +430,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     for (const f of files[agent]) backupFile(f, { dryRun });
     ai(['install-mcp', '--client', client, '--apply']);
     ai(['install-hooks', '--agent', client, '--apply']);
+    if (agent === 'codex') log.info('Na primeira vez que abrir o Codex, ele pede para revisar os hooks: escolha "Trust all and continue".');
   }
 
   if (agents.includes('hermes')) {
@@ -450,7 +470,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
 
   // Skills gerenciadas do ai-memory (ai-memory-*): pastas reais, que o link.mjs não toca.
   const claude = agents.includes('claude');
-  const agentsDir = agents.includes('cursor') || agents.includes('hermes');
+  const agentsDir = agents.includes('cursor') || agents.includes('hermes') || agents.includes('codex');
   const family = claude && agentsDir ? 'both' : claude ? 'claude-code' : agentsDir ? 'agents' : null;
   const targets = [family && `--agent ${family}`, agents.includes('openclaude') && '~/.openclaude/skills'].filter(Boolean);
   const dirs = [
@@ -531,6 +551,7 @@ async function uninstall(agents, { dryRun }) {
   const oc = agents.includes('openclaude') && which('openclaude');
   if (oc) runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory'], { dryRun });
   if (agents.includes('openclaude')) unwireOpenclaudeHooks({ dryRun });
+  if (agents.includes('codex')) unwireCodex({ dryRun });
   if (MAC) {
     if (launchdLoaded()) runLive('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { dryRun });
     log.info(`plist mantido em ${tilde(paths.plist)} (tem o token, se houver; apague se não for usar mais)`);

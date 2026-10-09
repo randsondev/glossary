@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Ajusta o Serena (versão fixada no sources.json) e registra o MCP nos agentes.
 //
-//   node serena/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude]
+//   node serena/setup.mjs [--dry-run] [--yes] [--agents claude,cursor,hermes,openclaude,codex]
 //                         [--memories keep|off] [--trusted "<glob>"]
 //   node serena/setup.mjs --uninstall [--dry-run]   (remove o MCP dos agentes; config e projetos ficam)
 //
@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  CODEX_HOME,
   HOME,
   REPO,
   backupFile,
@@ -35,7 +36,9 @@ import {
 const SERENA_HOME = path.join(HOME, '.serena');
 export const CONFIG = path.join(SERENA_HOME, 'serena_config.yml');
 export const FOLDER_LOCATION = path.join(SERENA_HOME, 'projects', '$projectFolderName', '.serena');
-const CONTEXT = { claude: 'claude-code', openclaude: 'claude-code', cursor: 'ide', hermes: 'ide' };
+const CONTEXT = { claude: 'claude-code', openclaude: 'claude-code', cursor: 'ide', hermes: 'ide', codex: 'codex' };
+// O Serena demora a subir; o padrão do Codex (10 s) estoura em projeto grande.
+const CODEX_STARTUP_TIMEOUT = 15;
 
 function serenaArgs(agent) {
   return ['start-mcp-server', `--context=${CONTEXT[agent]}`, '--project-from-cwd'];
@@ -226,6 +229,8 @@ async function wireAgents(bin, agents, { dryRun }) {
     runQuiet(cli, add, { dryRun });
   }
 
+  if (agents.includes('codex')) await configureCodex(bin, { dryRun });
+
   if (agents.includes('cursor')) {
     const file = path.join(HOME, '.cursor', 'mcp.json');
     const data = readJSON(file, {});
@@ -265,6 +270,40 @@ async function wireAgents(bin, agents, { dryRun }) {
   }
 }
 
+// Garante "startup_timeout_sec" na tabela [mcp_servers.serena] do config.toml do Codex.
+function setCodexStartupTimeout(file) {
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : [];
+  const start = lines.findIndex((l) => /^\[mcp_servers\.serena\]\s*$/.test(l));
+  if (start < 0) return;
+  let end = start + 1;
+  while (end < lines.length && !/^\[/.test(lines[end])) end++;
+  if (lines.slice(start, end).some((l) => /^startup_timeout_sec\s*=/.test(l))) return;
+  lines.splice(start + 1, 0, `startup_timeout_sec = ${CODEX_STARTUP_TIMEOUT}`);
+  fs.writeFileSync(file, lines.join('\n'));
+}
+
+async function configureCodex(bin, { dryRun }) {
+  const codex = which('codex');
+  if (!codex) return log.warn('codex: CLI não encontrada; pulei');
+  const cfg = path.join(CODEX_HOME, 'config.toml');
+  const add = ['mcp', 'add', 'serena', '--', bin, ...serenaArgs('codex')];
+  const got = run(codex, ['mcp', 'get', 'serena']);
+  if (got.code === 0) {
+    const args = /^\s*args:\s*(.*)$/im.exec(got.stdout)?.[1]?.trim() || '';
+    if (argsOk(args, 'codex')) {
+      if (!dryRun) setCodexStartupTimeout(cfg);
+      return log.ok('codex: serena já registrado');
+    }
+    log.warn(`codex: serena já registrado com outros argumentos: ${args || '(sem argumentos)'}`);
+    if (!dryRun && !(await confirm(`codex: trocar pelo registro do glossary (${serenaArgs('codex').join(' ')})?`))) return;
+    backupFile(cfg, { dryRun });
+    runQuiet(codex, ['mcp', 'remove', 'serena'], { dryRun });
+  } else if (!dryRun && !(await confirm(`codex: registrar o serena em ${tilde(cfg)}?`))) return;
+  backupFile(cfg, { dryRun });
+  runQuiet(codex, add, { dryRun });
+  if (!dryRun) setCodexStartupTimeout(cfg);
+}
+
 async function uninstall(agents, { dryRun }) {
   log.step('Remover o MCP do Serena dos agentes');
   for (const agent of ['claude', 'openclaude']) {
@@ -286,6 +325,8 @@ async function uninstall(agents, { dryRun }) {
   }
   const hermes = agents.includes('hermes') && which('hermes');
   if (hermes) runWithAnswers(hermes, ['mcp', 'remove', 'serena'], 'y\n', { dryRun });
+  const codex = agents.includes('codex') && which('codex');
+  if (codex && run(codex, ['mcp', 'get', 'serena']).code === 0) runQuiet(codex, ['mcp', 'remove', 'serena'], { dryRun });
   log.info(`config e projetos mantidos em ${tilde(SERENA_HOME)}; para desinstalar: uv tool uninstall serena-agent`);
   return 0;
 }

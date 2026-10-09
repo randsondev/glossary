@@ -2,7 +2,7 @@
   "targets": [
     {
       "dir": "~/.agents/skills",
-      "agents": ["cursor", "hermes"],
+      "agents": ["cursor", "hermes", "codex"],
       "exclude": []
     },
     {
@@ -19,6 +19,7 @@
   ],
   "builtins": {
     "claude": ["code-review"],
-    "cursor": ["loop", "review", "goal", "shell"]
+    "cursor": ["loop", "review", "goal", "shell"],
+    "codex": ["imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"]
   }
 }

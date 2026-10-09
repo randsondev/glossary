@@ -1,5 +1,5 @@
 // Leva para o ai-memory o que os agentes já guardaram neste computador:
-// - as conversas do Claude Code (terminal e VS Code) de cada pasta de projeto;
+// - as conversas do Claude Code (terminal e VS Code) e do Codex de cada pasta de projeto;
 // - as memórias do Claude Code (~/.claude/projects/<pasta>/memory/*.md), como páginas duráveis
 //   que todos os agentes acham pela busca da memória.
 //
@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { HOME, isMain, localProjects, log, parseFrontmatter, run, tilde } from '../scripts/lib.mjs';
+import { CODEX_HOME, HOME, isMain, localProjects, log, parseFrontmatter, run, tilde } from '../scripts/lib.mjs';
 import { BIN } from './setup.mjs';
 
 const CLAUDE_PROJECTS = path.join(HOME, '.claude', 'projects');
@@ -30,10 +30,31 @@ function cwdOf(file) {
 }
 
 // Uma entrada por pasta de projeto que ainda existe: quantas conversas e quais memórias.
+// Conversas do Codex: ~/.codex/sessions/AAAA/MM/DD/rollout-*.jsonl, com a pasta no "cwd" do começo.
+function codexSessions() {
+  const root = path.join(CODEX_HOME, 'sessions');
+  const out = [];
+  const walk = (dir) => {
+    for (const e of fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }) : []) {
+      const file = path.join(dir, e.name);
+      if (e.isDirectory()) walk(file);
+      else if (e.name.endsWith('.jsonl')) out.push(file);
+    }
+  };
+  walk(root);
+  return out;
+}
+
 export function discoverHistory() {
-  if (!fs.existsSync(CLAUDE_PROJECTS)) return [];
   const byDir = new Map();
-  for (const name of fs.readdirSync(CLAUDE_PROJECTS)) {
+  for (const file of codexSessions()) {
+    const cwd = cwdOf(file);
+    if (!cwd || !fs.existsSync(cwd)) continue;
+    const entry = byDir.get(cwd) || { dir: cwd, sessions: 0, memories: [] };
+    entry.sessions++;
+    byDir.set(cwd, entry);
+  }
+  for (const name of fs.existsSync(CLAUDE_PROJECTS) ? fs.readdirSync(CLAUDE_PROJECTS) : []) {
     const dir = path.join(CLAUDE_PROJECTS, name);
     if (!fs.statSync(dir).isDirectory()) continue;
     const transcripts = fs
@@ -114,7 +135,7 @@ if (isMain(import.meta.url)) {
   const list = discoverHistory();
   log.step('Histórico dos agentes neste computador');
   if (!list.length) {
-    log.info('nenhuma conversa do Claude Code encontrada');
+    log.info('nenhuma conversa do Claude Code ou do Codex encontrada');
     process.exit(0);
   }
   if (!values.apply) {

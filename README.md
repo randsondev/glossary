@@ -1,6 +1,6 @@
 # glossary
 
-Skills e memória compartilhadas por **Claude Code, Cursor, Hermes e OpenClaude**, montadas de uma vez só.
+Skills e memória compartilhadas por **Claude Code, Cursor, Hermes, OpenClaude e Codex**, montadas de uma vez só.
 
 - **Skills**: as próprias (`skills/`) e as de terceiros (`vendor/`, cópia fiel com lockfile) numa pasta só, ligadas por symlink onde cada agente lê. Atualizar é `git pull`.
 - **Memória**: o [ai-memory](https://github.com/akitaonrails/ai-memory) captura as sessões de todos os agentes num servidor local. Dá para largar uma tarefa num agente e continuar em outro.
@@ -26,6 +26,7 @@ O instalador confere os pré-requisitos (git e Node 20+), faz as poucas pergunta
 | Cursor | `~/.agents/skills` (e `~/.claude/skills`) | MCP + hooks | MCP, contexto `ide` |
 | Hermes | `~/.agents/skills` via `skills.external_dirs` | MCP + hooks de ferramenta | MCP, contexto `ide` |
 | OpenClaude | `~/.openclaude/skills` | MCP + hooks (se for confiável) | MCP, contexto `claude-code` |
+| Codex | `~/.agents/skills` (mesma pasta do Cursor e do Hermes) | MCP + hooks (se for confiável) | MCP, contexto `codex` |
 
 ## Estrutura
 

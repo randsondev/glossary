@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { discoverHistory, importHistory, showHistory } from '../ai-memory/history.mjs';
-import { readServiceEnv, setup as aiMemorySetup, unwireOpenclaudeHooks } from '../ai-memory/setup.mjs';
+import { readServiceEnv, setup as aiMemorySetup, unwireCodex, unwireOpenclaudeHooks } from '../ai-memory/setup.mjs';
 import { findSerena, setup as serenaSetup } from '../serena/setup.mjs';
 import { INSTALL_FILE, check } from './check.mjs';
 import { link } from './link.mjs';
@@ -113,6 +113,13 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     const on = await yesNo('Dar ao OpenClaude a memória compartilhada e as skills privadas? Só se ele usar um provedor confiável.', before);
     if (!on) memoryAgents = agents.filter((a) => a !== 'openclaude');
   }
+  if (agents.includes('codex')) {
+    log.info('O Codex manda ao modelo da OpenAI o que lê: as skills e a memória. Ele lê a mesma pasta de skills do Cursor e do Hermes (~/.agents/skills).');
+    log.info('Se o Codex não for confiável, as skills privadas saem dessa pasta, e o Cursor e o Hermes também deixam de vê-las.');
+    const before = Boolean(previous?.memoryAgents?.includes('codex'));
+    const on = await yesNo('Dar ao Codex a memória compartilhada e as skills privadas? Só com conta confiável (API, Team ou Enterprise, sem treino com seus dados).', before);
+    if (!on) memoryAgents = memoryAgents.filter((a) => a !== 'codex');
+  }
 
   const uvOrSerena = which('uv') || findSerena();
   let serena = false;
@@ -152,7 +159,8 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
 
   log.step('Skills');
   // Sem o OpenClaude nesta rodada, a pergunta não foi feita: a escolha anterior fica como está.
-  setupPrivateRepo({ openclaude: agents.includes('openclaude') ? memoryAgents.includes('openclaude') : undefined });
+  const answered = (a) => (agents.includes(a) ? memoryAgents.includes(a) : undefined);
+  setupPrivateRepo({ trust: { openclaude: answered('openclaude'), codex: answered('codex') } });
   if (validate() !== 0) die('há skills inválidas; corrija antes de continuar (node scripts/validate.mjs)');
   if ((await link({ agents, quiet: true })) !== 0) die('o link das skills falhou');
   if (run('git', ['-C', REPO, 'config', '--get', 'core.hooksPath']).stdout.trim() !== '.githooks') {
@@ -170,6 +178,8 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory']);
   }
   if (oc) unwireOpenclaudeHooks();
+  // Idem para o Codex: tira o MCP e os hooks que uma rodada anterior tinha ligado.
+  if (agents.includes('codex') && !memoryAgents.includes('codex')) unwireCodex();
 
   if (serena) {
     log.step('Serena');
