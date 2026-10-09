@@ -21,9 +21,10 @@ import {
   httpStatus,
   wired,
 } from '../ai-memory/setup.mjs';
-import { CONFIG as SERENA_CONFIG, argsOk, findSerena, readList } from '../serena/setup.mjs';
+import { CONFIG as SERENA_CONFIG, argsOk, codexTomlArgs, findSerena, readList } from '../serena/setup.mjs';
 import { expectedLinks, linkTarget } from './link.mjs';
 import {
+  CODEX_HOME,
   CONFIG_DIR,
   HOME,
   REPO,
@@ -188,6 +189,11 @@ function serenaRegistration(agent) {
     return argsOk((entry.args || []).join(' '), agent) || 'Serena registrado com outros argumentos';
   }
   const cli = agent === 'claude' ? findClaudeBinary() : which(agent);
+  if (!cli && agent === 'codex') {
+    // Só o aplicativo do Codex (sem o comando no terminal): confere no config.toml.
+    const args = codexTomlArgs(path.join(CODEX_HOME, 'config.toml'));
+    return args === null ? 'MCP do Serena não registrado' : argsOk(args, agent) || 'Serena registrado com outros argumentos';
+  }
   if (!cli) return null;
   const r = run(cli, ['mcp', 'get', 'serena']);
   if (r.code !== 0) return 'MCP do Serena não registrado';

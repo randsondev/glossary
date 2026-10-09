@@ -282,10 +282,57 @@ function setCodexStartupTimeout(file) {
   fs.writeFileSync(file, lines.join('\n'));
 }
 
+// A tabela [mcp_servers.serena] do config.toml do Codex: linhas do arquivo e onde ela começa e termina.
+function codexTable(text) {
+  const lines = text.split('\n');
+  const start = lines.findIndex((l) => /^\[mcp_servers\.serena\]\s*$/.test(l));
+  if (start < 0) return null;
+  let end = start + 1;
+  while (end < lines.length && !/^\[/.test(lines[end])) end++;
+  return { lines, start, end };
+}
+
+// Os argumentos registrados no config.toml (sem precisar do CLI do Codex); null se não há registro.
+export function codexTomlArgs(file) {
+  const t = fs.existsSync(file) ? codexTable(fs.readFileSync(file, 'utf8')) : null;
+  if (!t) return null;
+  const m = /^args\s*=\s*\[(.*)\]\s*$/m.exec(t.lines.slice(t.start, t.end).join('\n'));
+  return m ? m[1].replace(/["',]/g, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+
+// O aplicativo do Codex lê o mesmo config.toml e pode estar instalado sem o comando "codex" no terminal.
+async function configureCodexToml(bin, cfg, { dryRun }) {
+  const args = codexTomlArgs(cfg);
+  if (args !== null && argsOk(args, 'codex')) return log.ok('codex: serena já registrado');
+  if (args !== null) log.warn(`codex: serena já registrado com outros argumentos: ${args || '(sem argumentos)'}`);
+  const question = args === null ? `codex: registrar o serena em ${tilde(cfg)}?` : 'codex: trocar pelo registro do glossary?';
+  if (dryRun) return log.dry(`gravaria [mcp_servers.serena] em ${tilde(cfg)}`);
+  if (!(await confirm(question))) return;
+  const text = fs.existsSync(cfg) ? fs.readFileSync(cfg, 'utf8') : '';
+  const block = [
+    '[mcp_servers.serena]',
+    `command = ${JSON.stringify(bin)}`,
+    `args = ${JSON.stringify(serenaArgs('codex'))}`,
+    `startup_timeout_sec = ${CODEX_STARTUP_TIMEOUT}`,
+    '',
+  ];
+  const t = codexTable(text);
+  backupFile(cfg);
+  const lines = t ? t.lines : text ? text.replace(/\n*$/, '').split('\n') : [];
+  if (t) lines.splice(t.start, t.end - t.start, ...block);
+  else lines.push(...(lines.length ? [''] : []), ...block);
+  fs.mkdirSync(path.dirname(cfg), { recursive: true });
+  fs.writeFileSync(cfg, lines.join('\n'));
+  log.ok(`codex: serena gravado em ${tilde(cfg)}`);
+}
+
 async function configureCodex(bin, { dryRun }) {
   const codex = which('codex');
-  if (!codex) return log.warn('codex: CLI não encontrada; pulei');
   const cfg = path.join(CODEX_HOME, 'config.toml');
+  if (!codex) {
+    if (!fs.existsSync(CODEX_HOME)) return log.warn('codex: nem a CLI nem a pasta de config foram encontradas; pulei');
+    return configureCodexToml(bin, cfg, { dryRun });
+  }
   const add = ['mcp', 'add', 'serena', '--', bin, ...serenaArgs('codex')];
   const got = run(codex, ['mcp', 'get', 'serena']);
   if (got.code === 0) {
@@ -325,8 +372,22 @@ async function uninstall(agents, { dryRun }) {
   }
   const hermes = agents.includes('hermes') && which('hermes');
   if (hermes) runWithAnswers(hermes, ['mcp', 'remove', 'serena'], 'y\n', { dryRun });
-  const codex = agents.includes('codex') && which('codex');
-  if (codex && run(codex, ['mcp', 'get', 'serena']).code === 0) runQuiet(codex, ['mcp', 'remove', 'serena'], { dryRun });
+  if (agents.includes('codex')) {
+    const codex = which('codex');
+    const cfg = path.join(CODEX_HOME, 'config.toml');
+    if (codex && run(codex, ['mcp', 'get', 'serena']).code === 0) runQuiet(codex, ['mcp', 'remove', 'serena'], { dryRun });
+    else if (!codex && codexTomlArgs(cfg) !== null) {
+      // Sem o CLI: tira a tabela do config.toml.
+      const t = codexTable(fs.readFileSync(cfg, 'utf8'));
+      if (dryRun) log.dry(`tiraria [mcp_servers.serena] de ${tilde(cfg)}`);
+      else {
+        backupFile(cfg);
+        t.lines.splice(t.start, t.end - t.start);
+        fs.writeFileSync(cfg, t.lines.join('\n').replace(/\n{3,}/g, '\n\n'));
+        log.ok('codex: serena removido');
+      }
+    }
+  }
   log.info(`config e projetos mantidos em ${tilde(SERENA_HOME)}; para desinstalar: uv tool uninstall serena-agent`);
   return 0;
 }
