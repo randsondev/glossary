@@ -3,8 +3,8 @@
     "ponytail": {
       "repo": "https://github.com/dietrichgebert/ponytail.git",
       "ref": "main",
-      "commit": "9b58c1ffb790c075ca32e70a89cf1d80588f4abf",
-      "committed": "2026-10-10",
+      "commit": "2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5",
+      "committed": "2026-10-13",
       "skills": {
         "ponytail": {
           "path": "skills/ponytail",
@@ -16,7 +16,7 @@
         },
         "ponytail-debt": {
           "path": "skills/ponytail-debt",
-          "sha256": "5502427c6b2ea3f57ed9b6d3cd4de980d66fe927cb4bc151497e690176dbdb8f"
+          "sha256": "c61f74f1f053259f06fc799b675302da4592fc3138b86d10c2310f6d2fafcbdd"
         },
         "ponytail-gain": {
           "path": "skills/ponytail-gain",
@@ -41,16 +41,16 @@
     "mattpocock": {
       "repo": "https://github.com/mattpocock/skills.git",
       "ref": "main",
-      "commit": "4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d",
-      "committed": "2026-10-05",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "committed": "2026-10-09",
       "skills": {
         "ask-matt": {
           "path": "skills/engineering/ask-matt",
-          "sha256": "0173067a65de11c925d4dcf89408698ca5df828d2ab5effbe21997332107e679"
+          "sha256": "70c59ebfe4f83b849b84ef5a4507bd29b45e8ec7a6b7fa1ed770d68d00334f0c"
         },
         "diagnosing-bugs": {
           "path": "skills/engineering/diagnosing-bugs",
-          "sha256": "79cca571387cbb4e9f254c3f93fb8be51d36ebe6f3854d26d006c1f9e7c87b82"
+          "sha256": "29faf0d352422aa58beb0ce4666a49bdfdd5d2cc065c9dfe9be7b7e89fbdf584"
         },
         "grill-with-docs": {
           "path": "skills/engineering/grill-with-docs",
@@ -66,11 +66,11 @@
         },
         "setup-matt-pocock-skills": {
           "path": "skills/engineering/setup-matt-pocock-skills",
-          "sha256": "00ea45e6dbe99b412788ad3ca8dc3091d7fb0ab10f72848905739493013f686b"
+          "sha256": "bff19f6675e970b6f2d4245f892992b86c2366a1b0d6b448c667e04b9f403e4b"
         },
         "tdd": {
           "path": "skills/engineering/tdd",
-          "sha256": "c4236fd83d4629d4aed684403fd277aece9feb347c798e964a9a78a2ae1eb654"
+          "sha256": "aaed5857190bc8088332725c9c8deecf560744f6f7ef0bdfccf4bdf3fe678c16"
         },
         "to-spec": {
           "path": "skills/engineering/to-spec",
@@ -78,15 +78,15 @@
         },
         "to-tickets": {
           "path": "skills/engineering/to-tickets",
-          "sha256": "5c1691ddf02291d5189213f8ffc82d2b05451131929bbc9e99052f912a05c300"
+          "sha256": "6eccfac132d92b949821d154679adc7f597bfc3e8c929f3c03786b92f91b961f"
         },
         "wayfinder": {
           "path": "skills/engineering/wayfinder",
-          "sha256": "fa164901a041cab31d281288ea4b5af5aeb0a0d557b586cf6b341998a3fb3eb3"
+          "sha256": "4f71c4310d6ffaaa7db7df1ec416be6cdb5c06fc3a58751f4310901f9aacf945"
         },
         "implement": {
           "path": "skills/engineering/implement",
-          "sha256": "1a7a56bca542f46ff8e42fa5ddd293dab21b38b6dad57e1bf3e76d12e41c5fc2"
+          "sha256": "72f446ef5b35d3df73c21b574ba2ae50ab3d02fc5d4da44b80f27ce13e7dc18d"
         },
         "implement-spec": {
           "path": "skills/engineering/implement-spec",
@@ -110,7 +110,7 @@
         },
         "code-review": {
           "path": "skills/engineering/code-review",
-          "sha256": "2bf54bc5e5eed6f8c78b2dbe99bfcfcc0e0221e0c11dbf07ff0f27effb2aed76"
+          "sha256": "780be2eef8e387f5d0c07473485cdce4dd2e55c0587f1e96635eb7e929ed1123"
         },
         "pr": {
           "path": "skills/engineering/pr",
@@ -122,7 +122,7 @@
         },
         "wizard": {
           "path": "skills/engineering/wizard",
-          "sha256": "fd918004158f826ab85f20a69b75677be74dcbcea19066c4f2511b52fcd5af3a"
+          "sha256": "8fd93e38124bf81ad439231ba8af833b462ca9719c62373c87f25b06f6be776e"
         },
         "grill-me": {
           "path": "skills/productivity/grill-me",
@@ -130,15 +130,15 @@
         },
         "grilling": {
           "path": "skills/productivity/grilling",
-          "sha256": "d5833e50e0081bbf5133b6c6b61aa8ba9ffae66e9071404b61e45b18f4cdb57e"
+          "sha256": "84ca0320c5fa81a1261d6d1d4c120ada9dea80f856a2c2565404f7125a809b86"
         },
         "handoff": {
           "path": "skills/productivity/handoff",
-          "sha256": "fe287d0ae54ed66c99522e272af1020323ba4d4698ef60fe1fa63f042dffd313"
+          "sha256": "77c2607c751b7c522e0208ab113ba4949f8267610d6061323c7ccd3ace21d7da"
         },
         "teach": {
           "path": "skills/productivity/teach",
-          "sha256": "d9fbfb966d425f19cdbeb34cceab6ead62041ccacd00da29b55412333cf9748a"
+          "sha256": "9aaf696786348313963552e446415c67fdd8129276b61f02be6dcedb208cd381"
         },
         "to-questionnaire": {
           "path": "skills/productivity/to-questionnaire",
@@ -157,8 +157,8 @@
     "awesome-copilot": {
       "repo": "https://github.com/github/awesome-copilot.git",
       "ref": "main",
-      "commit": "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
-      "committed": "2026-10-02",
+      "commit": "156736fb63e965b2f547a1460f3b5972c46e6b24",
+      "committed": "2026-10-13",
       "skills": {
         "salesforce-apex-quality": {
           "path": "skills/salesforce-apex-quality",
@@ -176,15 +176,15 @@
     }
   },
   "aiMemory": {
-    "version": "v2.5.2",
+    "version": "v2.6.6",
     "assets": {
-      "macos-aarch64": "160881fab2be3d2e9cf64f656da517c961c1e14ff4987d75a70ee1c71e17e9ef",
-      "macos-x86_64": "35fe9b036707c587cfe75e21bbe4a49b00eac2018a047352970fd53d787e9c4a",
-      "linux-x86_64": "acbf6ee84e744a9ab0a8e133a3eefbbb77811d6b4d0ca9a281e664358c1a1fc8",
-      "linux-aarch64": "813e962b10b51877948805a3dc73bcbae512c143e18772e8ca170f1f83fd2ce7"
+      "macos-aarch64": "3162a52f632ffaab089c6fc78d7c97a0a5ab0fb51b242a48f245a106546c9cb7",
+      "macos-x86_64": "9ff7a95492fc3edc6ec3ee01b8a0b94f01aebbed018919741354b8076c4e23d1",
+      "linux-x86_64": "b0de4f2002be388170aa81a91252832aa5d234b3511196806d0ca1708de75353",
+      "linux-aarch64": "6379c99274cdbbe884ec36431ba002a7a1afd0fa1bcf221106e6a0190e246103"
     }
   },
   "serena": {
-    "version": "1.7.0"
+    "version": "2.0.0"
   }
 }

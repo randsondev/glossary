@@ -31,7 +31,7 @@
   ],
   "aiMemory": {
     "repo": "https://github.com/akitaonrails/ai-memory",
-    "version": "v2.5.2",
+    "version": "v2.6.6",
     "platforms": [
       "macos-aarch64",
       "macos-x86_64",
@@ -41,6 +41,6 @@
   },
   "serena": {
     "package": "serena-agent",
-    "version": "1.7.0"
+    "version": "2.0.0"
   }
 }
