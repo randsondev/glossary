@@ -123,7 +123,8 @@ export async function check({ agents } = {}) {
   if (current === `ai-memory ${version}`) ok(`${current}`);
   else bad(`binário ${current || 'ausente'} em ${tilde(BIN)} (esperado ${version})`);
   const status = await mcpStatus();
-  if (status === 405 || status === 401) ok(`servidor no ar (${MCP_URL}${status === 401 ? ', com auth' : ''})`);
+  if (status === 405) ok(`servidor no ar (${MCP_URL})`);
+  else if (status === 401) bad(`servidor no ar, mas recusou o token do bearer_token_file (${MCP_URL} respondeu 401)`);
   else bad(`servidor fora do ar (${MCP_URL} respondeu ${status || 'nada'})`);
   for (const agent of ['claude', 'cursor', 'codex']) {
     if (!memoryAgents.includes(agent)) {
