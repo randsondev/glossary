@@ -92,7 +92,12 @@ export function showHistory(list, { max = 15 } = {}) {
 function writeMemory(file, cwd) {
   const text = fs.readFileSync(file, 'utf8');
   const fm = parseFrontmatter(text);
-  const body = (fm ? text.split(/\r?\n/).slice(fm.bodyStart).join('\n') : text).trim();
+  // [[outra-memoria]] aponta para a raiz do projeto no ai-memory; a página dela fica em notes/claude-memory/.
+  const body = (fm ? text.split(/\r?\n/).slice(fm.bodyStart).join('\n') : text)
+    .trim()
+    .replace(/\[\[([^\]/|#]+)\]\]/g, (link, name) =>
+      fs.existsSync(path.join(path.dirname(file), `${name.trim()}.md`)) ? `[[notes/claude-memory/${name.trim()}]]` : link,
+    );
   const stem = path.basename(file, '.md');
   const title = String(fm?.data.name || stem).trim();
   const desc = fm?.data.description ? `${String(fm.data.description).trim()}\n\n` : '';
