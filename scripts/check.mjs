@@ -18,7 +18,7 @@ import {
   hasText,
   hermesAllowlist,
   hermesHooksWired,
-  httpStatus,
+  mcpStatus,
   wired,
 } from '../ai-memory/setup.mjs';
 import { CONFIG as SERENA_CONFIG, argsOk, codexTomlArgs, findSerena, readList } from '../serena/setup.mjs';
@@ -122,8 +122,8 @@ export async function check({ agents } = {}) {
   const current = fs.existsSync(BIN) ? run(BIN, ['--version']).stdout.trim() : '';
   if (current === `ai-memory ${version}`) ok(`${current}`);
   else bad(`binário ${current || 'ausente'} em ${tilde(BIN)} (esperado ${version})`);
-  const status = await httpStatus(MCP_URL);
-  if (status === 405) ok(`servidor no ar (${MCP_URL})`);
+  const status = await mcpStatus();
+  if (status === 405 || status === 401) ok(`servidor no ar (${MCP_URL}${status === 401 ? ', com auth' : ''})`);
   else bad(`servidor fora do ar (${MCP_URL} respondeu ${status || 'nada'})`);
   for (const agent of ['claude', 'cursor', 'codex']) {
     if (!memoryAgents.includes(agent)) {

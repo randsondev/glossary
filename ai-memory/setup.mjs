@@ -319,17 +319,35 @@ function restartService() {
   else runLive('systemctl', ['--user', 'restart', 'ai-memory']);
 }
 
-export function httpStatus(url) {
+// Installs nativas vêm com bearer token por default (ai-memory 3.1.1+). A checagem de saúde precisa do token
+// do bearer_token_file do config; sem token (installs criadas antes do default) segue a checagem simples.
+export const mcpToken = () => {
+  try {
+    const rel = /^\s*bearer_token_file\s*=\s*"([^"]+)"/m.exec(fs.readFileSync(path.join(paths.data, 'config.toml'), 'utf8'))?.[1];
+    const file = rel && path.join(paths.data, rel);
+    return file && fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : '';
+  } catch {
+    return '';
+  }
+};
+
+export function httpStatus(url, headers = {}) {
   return new Promise((resolve) => {
-    const req = http.get(url, (res) => (res.resume(), resolve(res.statusCode)));
+    const req = http.get(url, { headers }, (res) => (res.resume(), resolve(res.statusCode)));
     req.on('error', () => resolve(0));
     req.setTimeout(2000, () => (req.destroy(), resolve(0)));
   });
 }
 
+// Estado do servidor no /mcp com o token quando houver: 405 = no ar; 401 = no ar pedindo auth; 0 = sem resposta.
+export const mcpStatus = () => {
+  const token = mcpToken();
+  return httpStatus(MCP_URL, token ? { Authorization: `Bearer ${token}` } : {});
+};
+
 async function waitHealthy(seconds = 30) {
   for (let i = 0; i < seconds; i++) {
-    if ((await httpStatus(MCP_URL)) === 405) return true;
+    if ((await mcpStatus()) === 405) return true;
     await new Promise((r) => setTimeout(r, 1000));
   }
   return false;
@@ -456,9 +474,15 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
       if (/\bai-memory\b/.test(run(h.bin, [...h.args, 'mcp', 'list']).stdout)) log.ok(`${h.label}: ai-memory já registrado`);
       else if (dryRun || (await confirm(`${h.label}: registrar o MCP do ai-memory (hermes mcp add)?`))) {
         backupFile(run(h.bin, [...h.args, 'config', 'path']).stdout.trim(), { dryRun });
-        // Perguntas do Hermes: "exige autenticação?" -> n; "habilitar todas as ferramentas?"
-        // (ou, se a conexão falhar, "salvar mesmo assim?") -> y.
-        runWithAnswers(h.bin, [...h.args, 'mcp', 'add', 'ai-memory', '--url', MCP_URL], 'n\ny\n', { dryRun });
+        // O servidor local vem com bearer token (3.1.1+); o --url puro daria 401 e gravar o token na config do
+        // Hermes violaria a regra dele (segredo só no .env). O caminho oficial é a ponte stdio mcp-bridge, que
+        // lê o token do data dir ao subir. Perguntas do Hermes: habilitar ferramentas / salvar -> y.
+        runWithAnswers(
+          h.bin,
+          [...h.args, 'mcp', 'add', 'ai-memory', '--command', BIN, '--args', 'mcp-bridge', '--no-session-id', '--server-url', MCP_URL],
+          'y\ny\n',
+          { dryRun },
+        );
         if (!dryRun) checkHermes(h, 'ai-memory');
       }
       await wireHermesHooks(h, { dryRun });
