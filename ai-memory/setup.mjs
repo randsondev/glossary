@@ -324,7 +324,7 @@ function restartService() {
 export const mcpToken = () => {
   try {
     const rel = /^\s*bearer_token_file\s*=\s*"([^"]+)"/m.exec(fs.readFileSync(path.join(paths.data, 'config.toml'), 'utf8'))?.[1];
-    const file = rel && path.join(paths.data, rel);
+    const file = rel && path.resolve(paths.data, rel);
     return file && fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : '';
   } catch {
     return '';
@@ -339,7 +339,7 @@ export function httpStatus(url, headers = {}) {
   });
 }
 
-// Estado do servidor no /mcp com o token quando houver: 405 = no ar; 401 = no ar pedindo auth; 0 = sem resposta.
+// Estado do servidor no /mcp com o token quando houver: 405 = no ar; 401 = token ausente ou recusado; 0 = sem resposta.
 export const mcpStatus = () => {
   const token = mcpToken();
   return httpStatus(MCP_URL, token ? { Authorization: `Bearer ${token}` } : {});
