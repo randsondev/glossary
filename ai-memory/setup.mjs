@@ -345,6 +345,10 @@ export const mcpStatus = () => {
   return httpStatus(MCP_URL, token ? { Authorization: `Bearer ${token}` } : {});
 };
 
+// Ponte stdio do ai-memory: lê o token do data dir ao subir, então funciona com ou sem bearer token e o
+// segredo não vai para a config do agente. Pela URL pura, uma instalação com token responde 401.
+export const BRIDGE_ARGS = ['mcp-bridge', '--no-session-id', '--server-url', MCP_URL];
+
 async function waitHealthy(seconds = 30) {
   for (let i = 0; i < seconds; i++) {
     if ((await mcpStatus()) === 405) return true;
@@ -369,9 +373,45 @@ export function wired(agent, files) {
 // O Codex pede para revisar cada hook novo e guarda a aprovação (trusted_hash) no config.toml.
 export const codexHooksTrusted = () => hasText(AGENT_FILES.codex[0], 'trusted_hash');
 
-// Hooks de ferramenta do Hermes: o ai-memory só imprime o bloco YAML, e o glossary grava pelo CLI
-// do Hermes. As mensagens e o fim da sessão ficariam com um plugin de memória do Hermes, que não
-// é instalado aqui. O Hermes pede para aprovar cada hook na primeira sessão.
+// O install-mcp grava o Codex pela URL e, com token, espera $AI_MEMORY_AUTH_TOKEN no ambiente, que o
+// aplicativo do Codex não recebe. Trocamos a URL pela ponte e mantemos o resto da tabela.
+const codexAiMemoryTable = (lines) => {
+  const start = lines.findIndex((l) => /^\[mcp_servers\.(ai-memory|"ai-memory")\]\s*$/.test(l));
+  let end = start + 1;
+  while (start >= 0 && end < lines.length && !/^\[/.test(lines[end])) end++;
+  return { start, end };
+};
+
+export const codexBridged = () => {
+  const lines = fs.existsSync(AGENT_FILES.codex[0]) ? fs.readFileSync(AGENT_FILES.codex[0], 'utf8').split('\n') : [];
+  const { start, end } = codexAiMemoryTable(lines);
+  return start >= 0 && lines.slice(start, end).some((l) => /^args\s*=.*mcp-bridge/.test(l));
+};
+
+function bridgeCodex({ dryRun }) {
+  const file = AGENT_FILES.codex[0];
+  if (dryRun) return log.dry(`trocaria a URL do ai-memory pela ponte mcp-bridge em ${tilde(file)}`);
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : [];
+  const { start, end } = codexAiMemoryTable(lines);
+  if (start < 0) return log.err(`codex: o install-mcp não gravou [mcp_servers.ai-memory] em ${tilde(file)}`);
+  const rest = lines.slice(start + 1, end).filter((l) => !/^\s*(url|bearer_token_env_var|command|args)\s*=/.test(l));
+  lines.splice(start + 1, end - start - 1, `command = ${JSON.stringify(BIN)}`, `args = ${JSON.stringify(BRIDGE_ARGS)}`, ...rest);
+  fs.writeFileSync(file, lines.join('\n'));
+  log.ok(`codex: ai-memory pela ponte mcp-bridge em ${tilde(file)}`);
+}
+
+// O registro do ai-memory num perfil do Hermes ({ url } ou { command, args }), ou null.
+export const hermesMcpEntry = (h) => {
+  try {
+    return JSON.parse(run(h.bin, [...h.args, 'config', 'get', 'mcp_servers.ai-memory', '--json']).stdout.trim() || 'null');
+  } catch {
+    return null;
+  }
+};
+
+// Hooks do Hermes: o ai-memory só imprime o bloco YAML, e o glossary grava pelo CLI do Hermes. Desde
+// a 3.2 o bloco traz, além dos hooks de ferramenta, os de sessão. O Hermes pede para aprovar cada
+// hook na primeira sessão.
 export const hermesHooksWired = (h) =>
   ['pre_tool_call', 'post_tool_call'].every((e) => hermesHooks(h, e).some((x) => isAiMemoryHook(String(x?.command || ''))));
 
@@ -415,7 +455,11 @@ async function wireHermesHooks(h, { dryRun }) {
 
 // Tira do Hermes só os hooks do ai-memory.
 function unwireHermesHooks(h, { dryRun }) {
-  const events = ['pre_tool_call', 'post_tool_call'].filter((e) => hermesHooks(h, e).some((x) => isAiMemoryHook(String(x?.command || ''))));
+  let all = {};
+  try {
+    all = JSON.parse(run(h.bin, [...h.args, 'config', 'get', 'hooks', '--json']).stdout.trim() || '{}') || {};
+  } catch {}
+  const events = Object.keys(all).filter((e) => hermesHooks(h, e).some((x) => isAiMemoryHook(String(x?.command || ''))));
   if (!events.length) return;
   backupFile(run(h.bin, [...h.args, 'config', 'path']).stdout.trim(), { dryRun });
   const ok = events.map((e) => replaceHermesHooks(h, e, isAiMemoryHook, [], { dryRun })).every(Boolean);
@@ -456,7 +500,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
   const files = AGENT_FILES;
   for (const [agent, client] of [['claude', 'claude-code'], ['cursor', 'cursor'], ['codex', 'codex']]) {
     if (!agents.includes(agent)) continue;
-    if (!binaryChanged && wired(agent, files[agent])) {
+    if (!binaryChanged && wired(agent, files[agent]) && (agent !== 'codex' || codexBridged())) {
       log.ok(`${agent}: MCP e hooks do ai-memory já ligados`);
       continue;
     }
@@ -464,6 +508,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     for (const f of files[agent]) backupFile(f, { dryRun });
     ai(['install-mcp', '--client', client, '--apply']);
     ai(['install-hooks', '--agent', client, '--apply']);
+    if (agent === 'codex') bridgeCodex({ dryRun });
     if (agent === 'codex') log.info('Na primeira vez que abrir o Codex, ele pede para revisar os hooks: escolha "Trust all and continue".');
   }
 
@@ -471,18 +516,17 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     const profiles = hermesProfiles();
     if (!profiles.length) log.warn('hermes não está no PATH; pulei');
     for (const h of profiles) {
-      if (/\bai-memory\b/.test(run(h.bin, [...h.args, 'mcp', 'list']).stdout)) log.ok(`${h.label}: ai-memory já registrado`);
-      else if (dryRun || (await confirm(`${h.label}: registrar o MCP do ai-memory (hermes mcp add)?`))) {
+      const entry = hermesMcpEntry(h);
+      if (entry?.command === BIN) log.ok(`${h.label}: ai-memory já registrado`);
+      else if (
+        dryRun ||
+        (await confirm(entry ? `${h.label}: trocar o registro do ai-memory pela ponte mcp-bridge?` : `${h.label}: registrar o MCP do ai-memory (hermes mcp add)?`))
+      ) {
         backupFile(run(h.bin, [...h.args, 'config', 'path']).stdout.trim(), { dryRun });
-        // O servidor local vem com bearer token (3.1.1+); o --url puro daria 401 e gravar o token na config do
-        // Hermes violaria a regra dele (segredo só no .env). O caminho oficial é a ponte stdio mcp-bridge, que
-        // lê o token do data dir ao subir. Perguntas do Hermes: habilitar ferramentas / salvar -> y.
-        runWithAnswers(
-          h.bin,
-          [...h.args, 'mcp', 'add', 'ai-memory', '--command', BIN, '--args', 'mcp-bridge', '--no-session-id', '--server-url', MCP_URL],
-          'y\ny\n',
-          { dryRun },
-        );
+        if (entry) runWithAnswers(h.bin, [...h.args, 'mcp', 'remove', 'ai-memory'], 'y\n', { dryRun });
+        // Pela ponte (BRIDGE_ARGS): gravar o token na config do Hermes violaria a regra dele (segredo só no
+        // .env). Perguntas do Hermes: habilitar ferramentas / salvar -> y.
+        runWithAnswers(h.bin, [...h.args, 'mcp', 'add', 'ai-memory', '--command', BIN, '--args', ...BRIDGE_ARGS], 'y\ny\n', { dryRun });
         if (!dryRun) checkHermes(h, 'ai-memory');
       }
       await wireHermesHooks(h, { dryRun });
@@ -493,10 +537,15 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     const oc = which('openclaude');
     if (!oc) log.warn('openclaude não está no PATH; pulei');
     else {
-      if (run(oc, ['mcp', 'get', 'ai-memory']).code === 0) log.ok('openclaude: ai-memory já registrado');
-      else if (dryRun || (await confirm('openclaude: registrar o MCP do ai-memory no escopo de usuário?'))) {
+      const got = run(oc, ['mcp', 'get', 'ai-memory']);
+      if (got.code === 0 && got.stdout.includes('mcp-bridge')) log.ok('openclaude: ai-memory já registrado');
+      else if (
+        dryRun ||
+        (await confirm(got.code === 0 ? 'openclaude: trocar o registro do ai-memory pela ponte mcp-bridge?' : 'openclaude: registrar o MCP do ai-memory no escopo de usuário?'))
+      ) {
         backupFile(path.join(HOME, '.openclaude.json'), { dryRun });
-        runQuiet(oc, ['mcp', 'add', '--scope', 'user', '--transport', 'http', 'ai-memory', MCP_URL], { dryRun });
+        if (got.code === 0) runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory'], { dryRun });
+        runQuiet(oc, ['mcp', 'add', '--scope', 'user', 'ai-memory', '--', BIN, ...BRIDGE_ARGS], { dryRun });
       }
       // Os hooks do Claude Code, gravados com CLAUDE_CONFIG_DIR apontando para a pasta do OpenClaude.
       if (!binaryChanged && hasText(OPENCLAUDE_SETTINGS, 'ai-memory')) log.ok('openclaude: hooks do ai-memory já ligados');
@@ -511,7 +560,7 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
   }
 
   if (agents.includes('openclaw')) {
-    wireOpenclawMcp('ai-memory', { url: MCP_URL, transport: 'streamable-http' }, { dryRun });
+    wireOpenclawMcp('ai-memory', { command: BIN, args: BRIDGE_ARGS }, { dryRun });
     if (!binaryChanged && openclawHooksWired())
       log.ok('openclaw: plugin de captura do ai-memory já instalado');
     else if (dryRun || (await confirm('openclaw: instalar o plugin ai-memory e permitir acesso ao conteúdo das conversas para captura na memória local?'))) {

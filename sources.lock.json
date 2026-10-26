@@ -157,8 +157,8 @@
     "awesome-copilot": {
       "repo": "https://github.com/github/awesome-copilot.git",
       "ref": "main",
-      "commit": "613efc8c21d9b3ce642dff361d17006cd9967e28",
-      "committed": "2026-10-20",
+      "commit": "b1a00457c0b8794243883f387e7de71e88800e3e",
+      "committed": "2026-10-26",
       "skills": {
         "salesforce-apex-quality": {
           "path": "skills/salesforce-apex-quality",
@@ -176,12 +176,12 @@
     }
   },
   "aiMemory": {
-    "version": "v3.1.1",
+    "version": "v3.2.5",
     "assets": {
-      "macos-aarch64": "0915de5b4ee59250d13c619801a9d0244d6b3a96e6e95c0f2a0eba645f0ee9d4",
-      "macos-x86_64": "24bf8fc0d2dea4bc4c235e083573a2d822ad4af76f4805624ebe7ed401253e87",
-      "linux-x86_64": "d055aef2989eeceb08da7a2db3533d9389a689058c57b5f8a03d5f4439225a2d",
-      "linux-aarch64": "1e2256e5bccaaa1b7d1b8711a8e74c7ea11a18447133400243cf5db63ab3acf4"
+      "macos-aarch64": "4cf5294333978dfc581cfaf925db5ccf946b2894819d826262775cff4e37a306",
+      "macos-x86_64": "c4749a3ae35b66147ce4080f3101c5330d08b64fafb8bf2b0fbe186f1bc78850",
+      "linux-x86_64": "cea3e9e514b763b60372d6c9fbcc665c42cd3de2bd0a097dbe080be32a69960e",
+      "linux-aarch64": "3f0d2900b2addd15fb6519700a32f20ed9bb26a1392b359ade035c5e479ed08c"
     }
   },
   "serena": {
