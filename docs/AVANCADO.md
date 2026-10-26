@@ -105,11 +105,10 @@ O script faz, em ordem:
 1. **Binário**: baixa a versão fixada em `sources.json`, confere o sha256 contra o `sources.lock.json` e extrai em `~/Applications/ai-memory/` (Linux: `~/.local/opt/ai-memory/`). A pasta `hooks/` fica ao lado do binário.
 2. **Dados**: `ai-memory init` cria `~/Library/Application Support/ai-memory` (Linux: `~/.local/share/ai-memory`). Os dados nunca vão para repositório nenhum. Para backup: `~/Applications/ai-memory/ai-memory backup --to <arquivo>`.
 3. **LLM**: pergunta o provedor (veja abaixo).
-4. **Serviço**: grava o LaunchAgent `~/Library/LaunchAgents/com.github.akitaonrails.ai-memory.plist` com `chmod 600` e sobe com `launchctl bootstrap`. No Linux, grava `~/.config/systemd/user/ai-memory.service` e o arquivo de ambiente `~/.config/ai-memory/env` (`chmod 600`). O servidor escuta só em `127.0.0.1:49374`, sem token.
+4. **Serviço**: grava o LaunchAgent `~/Library/LaunchAgents/com.github.akitaonrails.ai-memory.plist` com `chmod 600` e sobe com `launchctl bootstrap`. No Linux, grava `~/.config/systemd/user/ai-memory.service` e o arquivo de ambiente `~/.config/ai-memory/env` (`chmod 600`). O servidor escuta só em `127.0.0.1:49374`. Instalações novas (ai-memory 3.1.1+) vêm com bearer token em `auth-tokens/default`, na pasta de dados; as criadas antes ficam sem token.
 5. **Agentes**: pergunta, agente por agente, antes de gravar.
    - Claude Code e Cursor: `install-mcp` e `install-hooks` do próprio ai-memory.
-   - Hermes: `hermes mcp add ai-memory --url http://127.0.0.1:49374/mcp`, sem autenticação e com todas as ferramentas.
-   - OpenClaude: `openclaude mcp add --scope user --transport http ai-memory http://127.0.0.1:49374/mcp`.
+   - Hermes, OpenClaude, OpenClaw e Codex: pela ponte stdio `ai-memory mcp-bridge --no-session-id --server-url http://127.0.0.1:49374/mcp`, que lê o token da pasta de dados. Pela URL pura, uma instalação com token responde 401; pela ponte, o token não vai para a config do agente. No Codex, o `install-mcp` grava a URL e o glossary troca pela ponte na mesma tabela.
 6. **Skills do próprio ai-memory**: instala as `ai-memory-*`. São pastas reais, e o glossary convive com elas.
 
 ### Qual LLM escolher
