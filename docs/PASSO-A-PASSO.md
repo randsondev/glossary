@@ -37,7 +37,7 @@ As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em
 
 No fim aparece uma conferência. O esperado é **"tudo certo"**.
 
-O instalador também cria o **`glossary-internal`** ao lado do glossary (ex.: `~/projetos/glossary-internal`). É o seu repositório privado, para skills com dados da empresa. Ele fica só nesta máquina: não tem remote e não vai para servidor nenhum.
+O instalador também cria o **`glossary-internal`** ao lado do glossary (ex.: `~/projetos/glossary-internal`). É o seu repositório pessoal, para as skills que não vão para o público (ex.: com dados da empresa). Ele fica só nesta máquina: não tem remote e não vai para servidor nenhum.
 
 > Rode o instalador **antes** de abrir um agente num projeto da empresa que você ainda não configurou. Assim as conversas já caem no lugar certo.
 

@@ -1,4 +1,4 @@
-// Repositório privado (skills com dado da empresa) e config local: criar numa máquina nova e
+// Repositório privado (skills pessoais, que não vão para o público) e config local: criar numa máquina nova e
 // levar de um computador para outro. Nada disso passa por servidor: fica só nas máquinas.
 //
 //   ./install.sh --export             gera ~/glossary-privado.tar.gz (repositório privado + config local)
@@ -17,8 +17,9 @@ const PROJECTS_FILE = path.join(CONFIG_DIR, 'projects.json');
 
 const README = `# glossary-internal
 
-Skills com dado da empresa. Este repositório fica só nesta máquina: não adicione remote e não envie
-para servidor nenhum. Para levar a outro computador: \`./install.sh --export\` no glossary.
+Suas skills pessoais, as que não vão para o glossary público (ex.: com dado da empresa).
+Este repositório fica só nesta máquina: não adicione remote e não envie para servidor nenhum.
+Para levar a outro computador: \`./install.sh --export\` no glossary.
 
 - Uma pasta por skill: \`skills/<nome>/SKILL.md\` (modelo em \`templates/skill\` do glossary).
 - Depois de criar ou remover uma skill, rode \`node scripts/link.mjs\` no glossary.

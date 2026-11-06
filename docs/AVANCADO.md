@@ -268,7 +268,7 @@ git add skills && git commit -m "Descreve a mudança"
 git push -u origin minha-mudanca     # depois abra o PR no GitHub
 ```
 
-**Repositório privado**: o `./install.sh` cria o `glossary-internal` ao lado do glossary (só local, `git init` sem remote) e registra a pasta `skills/` dele em `~/.config/glossary/roots.json`. As skills de lá entram no link e no validate como as do glossary. Para outra pasta, ou mais de uma, edite o `roots.json`:
+**Repositório privado**: o `./install.sh` cria o `glossary-internal` ao lado do glossary (só local, `git init` sem remote). Ele é pessoal: guarda as skills que não vão para o público; uma skill que sirva para todos vai para o glossary por PR. O instalador também registra a pasta `skills/` dele em `~/.config/glossary/roots.json`. As skills de lá entram no link e no validate como as do glossary. Para outra pasta, ou mais de uma, edite o `roots.json`:
 
 ```json
 [{ "dir": "~/projetos/skills-do-time/skills", "agents": ["claude", "cursor", "hermes"] }]
