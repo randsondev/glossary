@@ -26,7 +26,9 @@ As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em
 
 | Pergunta | O que responder |
 |---|---|
-| **Pasta de um projeto da empresa** | O caminho de cada projeto da empresa, um por vez (ex.: `~/projetos/meu-projeto`). Enter quando acabar. Esses projetos ficam com a memória separada dos pessoais, no workspace `empresa`. |
+| **Pasta de um projeto da empresa** | O caminho de cada projeto da empresa, um por vez (ex.: `~/projetos/meu-projeto`). Enter quando acabar. Esses projetos ficam com a memória separada dos pessoais. |
+| **Nome do workspace da empresa** | Um nome curto, em minúsculas (ex.: `minhaempresa`). Só aparece na primeira vez. |
+| **Nomes da empresa para bloquear** | Enter aceita o nome do workspace. Acrescente outros separados por vírgula (ex.: nome de cliente). A trava de commit não deixa esses nomes entrarem no repositório público. Só aparece na primeira vez. |
 | **Dar ao Codex a memória e as skills privadas?** | Enter (não), a menos que ele use conta confiável (API, Team ou Enterprise, sem treino com seus dados). O Codex lê a mesma pasta de skills do Cursor e do Hermes: com "não", as skills privadas saem dessa pasta e o Hermes também deixa de vê-las. |
 | **Dar ao OpenClaude a memória e as skills privadas?** | Enter (não). Só responda `s` se ele usar apenas provedores confiáveis. Com `s`, as sessões dele também passam a ser gravadas. |
 | **Instalar o Serena?** | Enter (sim). Só aparece se você tiver o `uv`. |
@@ -62,7 +64,7 @@ A memória grava sozinha no Claude Code, no Cursor, no Codex e no OpenClaude (os
 
 ## Outro computador
 
-O `git clone` traz só o que é público. As skills privadas, a lista de nomes bloqueados (se você criou) e os projetos configurados ficam só na máquina onde foram criados. Para levar:
+O `git clone` traz só o que é público. As skills privadas, a lista de nomes da empresa e os projetos configurados ficam só na máquina onde foram criados. Para levar:
 
 1. No computador antigo: `./install.sh --export`. Isso gera `~/glossary-privado.tar.gz`.
 2. Leve o arquivo por pendrive ou pela rede local (`scp`). **Nunca** por nuvem, e-mail ou mensageiro: ele tem dados da empresa.

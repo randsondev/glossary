@@ -18,7 +18,7 @@ import { readServiceEnv, setup as aiMemorySetup, unwireCodex, unwireOpenclaudeHo
 import { findSerena, setup as serenaSetup } from '../serena/setup.mjs';
 import { INSTALL_FILE, check } from './check.mjs';
 import { link } from './link.mjs';
-import { exportPrivate, importPrivate, setupPrivateRepo } from './private.mjs';
+import { DENY_FILE, exportPrivate, importPrivate, setupPrivateRepo, writeDenyTerms } from './private.mjs';
 import {
   CONFIG_DIR,
   REPO,
@@ -68,8 +68,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     for (const p of localProjects()) log.info(`  ${tilde(p.dir)}  (workspace "${p.aiMemory?.workspace || '-'}")`);
   }
   log.info('Projetos da empresa ficam com a memória separada dos projetos pessoais.');
-  // Workspace genérico: a instalação não pergunta o nome da empresa.
-  const workspace = localProjects().find((p) => p.aiMemory)?.aiMemory.workspace || 'empresa';
+  let workspace = localProjects().find((p) => p.aiMemory)?.aiMemory.workspace;
   const added = [];
   for (;;) {
     if (yes) break;
@@ -84,6 +83,11 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
       log.info(`${tilde(dir)} já está configurado`);
       continue;
     }
+    while (!workspace) {
+      const w = (await ask('Nome do workspace da empresa (letras minúsculas, ex.: minhaempresa):')).toLowerCase();
+      if (/^[a-z0-9][a-z0-9._-]*$/.test(w)) workspace = w;
+      else log.warn('use só a-z, 0-9, ponto, hífen e sublinhado');
+    }
     const entry = { dir: tilde(dir), aiMemory: { workspace, ignore_paths: [] } };
     // Projeto Salesforce: o Serena não tem servidor de linguagem para Apex; fixa o do JavaScript dos LWC.
     if (fs.existsSync(path.join(dir, 'sfdx-project.json'))) entry.serena = { language_servers: ['typescript'] };
@@ -91,6 +95,15 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     known.add(dir);
     added.push(dir);
     log.ok(`${tilde(dir)} -> workspace "${workspace}"${entry.serena ? ' (Salesforce: Serena com typescript)' : ''}`);
+  }
+
+  // Termos da empresa para a trava de commit: ficam só nesta máquina, nunca no repositório.
+  let denyTerms = [];
+  if (!fs.existsSync(DENY_FILE)) {
+    log.info('A trava de commit impede que nomes da empresa entrem no repositório público. A lista fica só nesta máquina.');
+    const def = workspace || '';
+    const answer = yes ? def : await ask(`Nomes da empresa para bloquear, separados por vírgula${def ? ` [${def}]` : ' (Enter para pular)'}:`, def);
+    denyTerms = answer.split(',').map((t) => t.trim()).filter(Boolean);
   }
 
   let memoryAgents = agents;
@@ -135,12 +148,14 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
   if (company.length) log.info(`workspace separado em: ${company.map(tilde).join(', ')}`);
   log.info(`Serena: ${serena ? 'sim' : 'não'}`);
   if (!extraRoots().length) log.info('criar o repositório privado (só nesta máquina) ao lado do glossary');
+  if (denyTerms.length) log.info(`trava de commit com ${denyTerms.length} nome(s) da empresa`);
   if (importList.length) log.info(`levar para a memória o histórico de ${importList.length} pasta(s)`);
   if (!(await yesNo('Pode começar?', true))) return 1;
   setAssumeYes(true);
 
   // ---------- execução ----------
   if (projects.projects.length) writeJSON(PROJECTS_FILE, projects);
+  if (denyTerms.length) writeDenyTerms(denyTerms);
 
   log.step('Skills');
   // Sem o OpenClaude nesta rodada, a pergunta não foi feita: a escolha anterior fica como está.
