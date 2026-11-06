@@ -47,7 +47,6 @@ import {
   tilde,
   which,
 } from './lib.mjs';
-import { DENY_FILE } from './private.mjs';
 
 import { openclawConfig, openclawHooksWired } from './openclaw.mjs';
 
@@ -86,7 +85,6 @@ export async function check({ agents } = {}) {
   for (const r of roots)
     fs.existsSync(r.dir) ? ok(`privadas: ${tilde(r.dir)} (${listSkills(r.dir, { nested: true }).length} skill(s))`) : bad(`privadas: ${tilde(r.dir)} não existe (rode ./install.sh)`);
   if (!roots.length) warn('sem repositório privado (rode ./install.sh)');
-  if (!fs.existsSync(DENY_FILE)) warn(`sem a lista de nomes da empresa (${tilde(DENY_FILE)}): a trava de commit só pega os padrões genéricos (rode ./install.sh)`);
   if (agents.includes('hermes')) {
     const profiles = hermesProfiles();
     if (!profiles.length) warn('hermes: não está no PATH');
