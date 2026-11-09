@@ -563,7 +563,9 @@ async function wireAgents(agents, { dryRun, binaryChanged }) {
     }
   }
 
-  if (agents.includes('openclaw')) {
+  // A pasta ~/.openclaw basta para detectar o OpenClaw, mas o registro passa pelo CLI dele.
+  if (agents.includes('openclaw') && !which('openclaw')) log.warn('openclaw não está no PATH; pulei');
+  else if (agents.includes('openclaw')) {
     wireOpenclawMcp('ai-memory', { command: BIN, args: BRIDGE_ARGS }, { dryRun });
     if (!binaryChanged && openclawHooksWired())
       log.ok('openclaw: plugin de captura do ai-memory já instalado');

@@ -175,7 +175,8 @@ export async function check({ agents } = {}) {
   }
   if (memoryAgents.includes('openclaw')) {
     const entry = openclawConfig().mcp?.servers?.['ai-memory'];
-    if (!entry || entry.enabled === false) bad('openclaw: MCP do ai-memory ausente ou desligado (rode ./install.sh)');
+    if (!which('openclaw')) bad('openclaw: não está no PATH (instale o OpenClaw ou apague ~/.openclaw)');
+    else if (!entry || entry.enabled === false) bad('openclaw: MCP do ai-memory ausente ou desligado (rode ./install.sh)');
     else {
       if (entry.command === BIN && entry.args?.join(' ') === BRIDGE_ARGS.join(' ')) ok('openclaw: MCP do ai-memory registrado');
       else viaUrl('openclaw');

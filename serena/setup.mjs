@@ -199,7 +199,8 @@ async function configureProjects(bin, { dryRun }) {
 
 async function wireAgents(bin, agents, { dryRun }) {
   log.step('Registrar o MCP do Serena nos agentes');
-  if (agents.includes('openclaw')) wireOpenclawMcp('serena', { command: bin, args: serenaArgs('openclaw') }, { dryRun });
+  if (agents.includes('openclaw') && !which('openclaw')) log.warn('openclaw: CLI não encontrada; pulei');
+  else if (agents.includes('openclaw')) wireOpenclawMcp('serena', { command: bin, args: serenaArgs('openclaw') }, { dryRun });
   for (const agent of ['claude', 'openclaude']) {
     if (!agents.includes(agent)) continue;
     const cli = agent === 'claude' ? findClaudeBinary() : which('openclaude');
