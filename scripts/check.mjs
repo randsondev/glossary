@@ -22,6 +22,7 @@ import {
   hermesHooksWired,
   hermesMcpEntry,
   hooksAtUrl,
+  mcpCall,
   mcpStatus,
   mcpToken,
   wired,
@@ -54,7 +55,7 @@ import { openclawConfig, openclawHooksWired } from './openclaw.mjs';
 
 export const INSTALL_FILE = path.join(CONFIG_DIR, 'install.json');
 
-export async function check({ agents } = {}) {
+export async function check({ agents, deep = false } = {}) {
   const choices = readJSON(INSTALL_FILE, {});
   agents ||= choices.agents || resolveAgents();
   // Sem escolha registrada, vale o padrão do instalador: OpenClaude e Codex ficam fora da memória.
@@ -227,6 +228,26 @@ export async function check({ agents } = {}) {
     }
   }
 
+  // ---------- prova de uso (--deep) ----------
+  if (deep) {
+    log.step('Prova de uso');
+    try {
+      const counts = JSON.parse(await mcpCall('memory_status')).counts;
+      ok(`ai-memory: chamada MCP respondeu (${counts.observations} observações)`);
+    } catch (e) {
+      bad(`ai-memory: a chamada MCP falhou (${e.message})`);
+    }
+    // O próprio Claude Code sobe cada servidor e diz se conectou, como numa sessão nova.
+    const claude = agents.includes('claude') && findClaudeBinary();
+    const listed = claude ? run(claude, ['mcp', 'list'], { timeout: 90000 }).stdout : '';
+    for (const name of ['ai-memory', ...(choices.serena !== false ? ['serena'] : [])]) {
+      if (!claude) break;
+      const line = listed.split('\n').find((l) => l.startsWith(`${name}:`)) || '';
+      if (/connected/i.test(line) && !/fail|error/i.test(line)) ok(`claude: ${name} conectado`);
+      else bad(`claude: ${name} não conectou (${line.split(' - ').pop() || 'fora do claude mcp list'})`);
+    }
+  }
+
   log.step('Resultado');
   if (errors) log.err(`${errors} problema(s) e ${warnings} aviso(s). Corrija os itens acima ou rode ./install.sh de novo.`);
   else log.ok(`tudo certo${warnings ? ` (${warnings} aviso(s))` : ''}`);
@@ -269,6 +290,6 @@ function serenaRegistration(agent, h) {
 }
 
 if (isMain(import.meta.url)) {
-  const { values } = parseArgs({ options: { agents: { type: 'string' } } });
-  process.exit(await check({ agents: values.agents ? resolveAgents(values.agents) : undefined }));
+  const { values } = parseArgs({ options: { agents: { type: 'string' }, deep: { type: 'boolean' } } });
+  process.exit(await check({ agents: values.agents ? resolveAgents(values.agents) : undefined, deep: values.deep }));
 }

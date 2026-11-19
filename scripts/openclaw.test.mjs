@@ -7,6 +7,10 @@ import test from 'node:test';
 
 test('OpenClaw: workspaces, regras preservadas, idempotência e raízes restritas', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'glossary-openclaw-'));
+  // O registro em dry-run não roda o OpenClaw, mas exige o programa no PATH: um falso basta,
+  // e o teste não depende de o OpenClaw estar instalado (no CI não está).
+  fs.mkdirSync(path.join(dir, 'bin'));
+  fs.writeFileSync(path.join(dir, 'bin', 'openclaw'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
   try {
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', String.raw`
       import assert from 'node:assert/strict';
@@ -66,7 +70,7 @@ test('OpenClaw: workspaces, regras preservadas, idempotência e raízes restrita
       assert.equal(links[0].dir, path.join(process.env.HOME, '.agents', 'skills'));
     `], {
       cwd: new URL('..', import.meta.url), encoding: 'utf8',
-      env: { ...process.env, HOME: dir, XDG_CONFIG_HOME: path.join(dir, '.config'), OPENCLAW_STATE_DIR: path.join(dir, '.openclaw'), OPENCLAW_CONFIG_PATH: path.join(dir, '.openclaw', 'openclaw.json') },
+      env: { ...process.env, PATH: `${path.join(dir, 'bin')}${path.delimiter}${process.env.PATH}`, HOME: dir, XDG_CONFIG_HOME: path.join(dir, '.config'), OPENCLAW_STATE_DIR: path.join(dir, '.openclaw'), OPENCLAW_CONFIG_PATH: path.join(dir, '.openclaw', 'openclaw.json') },
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
   } finally {

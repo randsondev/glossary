@@ -42,7 +42,8 @@ sources.lock.json               commit de cada fonte e sha256 de cada skill e de
 link.json                       pastas de destino por agente e exclusões
 install.sh                      instalação guiada (chama scripts/install.mjs)
 glossary.mjs                    roda tudo em sequência (idempotente, --dry-run, --check)
-scripts/check.mjs               confere a instalação inteira, sem alterar nada
+scripts/check.mjs               confere a instalação inteira, sem alterar nada (--deep: chamada MCP real)
+scripts/e2e.mjs                 instala tudo numa pasta pessoal temporária e confere (CI; --from main testa a atualização)
 scripts/private.mjs             repositório privado: cria e leva para outro computador (--export/--import)
 scripts/validate.mjs            regras das skills (estritas nas próprias)
 scripts/link.mjs                symlinks nas pastas dos agentes (--unlink desfaz)
@@ -58,6 +59,13 @@ ai-memory/dedupe.mjs            corrige o histórico importado mais de uma vez
 serena/setup.mjs                ajusta a config do Serena e registra o MCP
 templates/skill/SKILL.md        modelo para skill nova
 ```
+
+## Testes
+
+- `node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs'`: testes de unidade.
+- `node scripts/e2e.mjs`: instala tudo numa pasta pessoal temporária, com outra porta e o ai-memory como processo, sem tocar na instalação desta máquina; `--from main` instala a main antes e atualiza em cima dela.
+- `node glossary.mjs --check --deep`: na instalação real, faz uma chamada MCP e pergunta ao Claude Code se os servidores conectam. O `./install.sh` termina com ela.
+- Toda correção (`fix:`) vem com o teste que reproduz o defeito, num `*.test.mjs` ou num passo do `scripts/e2e.mjs`.
 
 ## Fontes de terceiros
 

@@ -14,6 +14,10 @@ test('MCP e ponte usam a porta configurada, mantendo o padrão sem config', asyn
   try {
     const first = await import('./setup.mjs?default');
     assert.equal(first.MCP_URL, 'http://127.0.0.1:49374/mcp');
+    // Primeira instalação com GLOSSARY_AI_MEMORY_BIND (teste de instalação): usa essa porta até o config existir.
+    process.env.GLOSSARY_AI_MEMORY_BIND = '127.0.0.1:49399';
+    assert.equal((await import('./setup.mjs?bind')).MCP_URL, 'http://127.0.0.1:49399/mcp');
+    delete process.env.GLOSSARY_AI_MEMORY_BIND;
     assert.ok(first.paths.data.startsWith(dir + path.sep), 'dados do teste devem ficar na pasta temporária');
     fs.mkdirSync(first.paths.data, { recursive: true });
     const cases = [

@@ -41,8 +41,8 @@
     "mattpocock": {
       "repo": "https://github.com/mattpocock/skills.git",
       "ref": "main",
-      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
-      "committed": "2026-10-31",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "committed": "2026-11-12",
       "skills": {
         "ask-matt": {
           "path": "skills/engineering/ask-matt",
@@ -157,8 +157,8 @@
     "awesome-copilot": {
       "repo": "https://github.com/github/awesome-copilot.git",
       "ref": "main",
-      "commit": "b13e55f85ffdf451d40d09839cb1e337bf3eda98",
-      "committed": "2026-11-09",
+      "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+      "committed": "2026-11-16",
       "skills": {
         "salesforce-apex-quality": {
           "path": "skills/salesforce-apex-quality",
@@ -176,12 +176,12 @@
     }
   },
   "aiMemory": {
-    "version": "v3.4.4",
+    "version": "v3.4.7",
     "assets": {
-      "macos-aarch64": "498f07cd5581516f2987fe65b9e266d6f5a30066ec99a2e91a897e18f8507e64",
-      "macos-x86_64": "6ec4661e298434e3c321e0d6c42da97fad5b6b6b03237ee42633c34ca40d3893",
-      "linux-x86_64": "2d69626c3f2ca7498b43da7fe733162ac798bffa7d088319bde1808c5d62ab59",
-      "linux-aarch64": "034c290de7e78b1c969a02135e054bc7a661bb8654c77939123bf0a6b5aa58fb"
+      "macos-aarch64": "7f3c279f04e13781c9b0b75d7b9ff9e4c2bf99629c018e92073b7da2f538673d",
+      "macos-x86_64": "91610afc01148f910a3250bb525c74c328aac418c7279ea67e531f9292422a55",
+      "linux-x86_64": "97d1954d4bdef549f4b39d169434ca6741d0755dd3135ab78da8c22e812f8bad",
+      "linux-aarch64": "020615f4d761b48629e09981ec5d7f8702faa197ff9613e6b793fe326175eedf"
     }
   },
   "serena": {
