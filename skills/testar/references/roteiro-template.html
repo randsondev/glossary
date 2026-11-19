@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roteiro NOME</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: coluna única de leitura; cada caso é uma linha com número, o que fazer, o que esperar e o resultado marcado ao lado. */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --fg: #16232b;
+  --muted: #5b6b75;
+  --line: #d9e0e4;
+  --accent: #0b6f85;
+  --accent-soft: #e2f1f4;
+  --ok: #1d7a4a;
+  --ok-soft: #e1f3e8;
+  --bad: #b3362b;
+  --bad-soft: #fbe6e3;
+  --hold: #8a6100;
+  --hold-soft: #fbf0d3;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --surface: #172229; --fg: #e6eef1; --muted: #93a4ad; --line: #2a3941;
+    --accent: #5cc3d8; --accent-soft: #15333b;
+    --ok: #62c98f; --ok-soft: #16342a; --bad: #f08a7e; --bad-soft: #3d1f1c; --hold: #e0b54a; --hold-soft: #3a2f12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --surface: #172229; --fg: #e6eef1; --muted: #93a4ad; --line: #2a3941;
+  --accent: #5cc3d8; --accent-soft: #15333b;
+  --ok: #62c98f; --ok-soft: #16342a; --bad: #f08a7e; --bad-soft: #3d1f1c; --hold: #e0b54a; --hold-soft: #3a2f12;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap {
+  max-width: 860px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px;
+}
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 28px; line-height: 1.15; }
+h2 { font-size: 19px; }
+p { margin: 0; }
+code { font-family: var(--mono); font-size: 0.9em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 10px; }
+header p { color: var(--muted); max-width: 65ch; }
+.notice { border-left: 3px solid var(--hold); background: var(--hold-soft); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.notice strong { font-weight: 600; }
+.sync { font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.sync.err { color: var(--bad); }
+
+.summary { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 14px 0; border-block: 1px solid var(--line); }
+.stat { display: flex; align-items: baseline; gap: 6px; }
+.stat b { font-family: var(--display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.stat.ok b { color: var(--ok); } .stat.bad b { color: var(--bad); } .stat.hold b { color: var(--hold); }
+
+.phase { display: flex; flex-direction: column; gap: 4px; }
+.phase-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding-bottom: 8px; }
+.phase-head .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.phase-note { color: var(--muted); font-size: 14px; max-width: 65ch; padding-bottom: 8px; }
+.tag { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hold); background: var(--hold-soft); padding: 2px 8px; border-radius: 999px; }
+.tag.camada { color: var(--accent); background: var(--accent-soft); display: inline-block; margin-bottom: 4px; }
+
+.case { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 12px; padding: 16px 0; border-top: 1px solid var(--line); }
+.case .num { font-family: var(--mono); font-size: 13px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.case .body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.case h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.case dl { margin: 0; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.case dt { color: var(--muted); }
+.case dd { margin: 0; }
+.case[data-status="ok"] .num { color: var(--ok); }
+.case[data-status="falha"] .num { color: var(--bad); }
+.case[data-status="bloq"] .num { color: var(--hold); }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-size: 13px; font-weight: 500; color: var(--fg); background: transparent; border: 0; border-left: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button:hover:not(:disabled) { background: var(--accent-soft); }
+.seg button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg button:disabled { cursor: default; color: var(--muted); }
+.seg button[aria-pressed="true"][data-v="ok"] { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.seg button[aria-pressed="true"][data-v="falha"] { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.seg button[aria-pressed="true"][data-v="bloq"] { background: var(--hold-soft); color: var(--hold); font-weight: 600; }
+.meta { font-size: 12px; color: var(--muted); }
+textarea { font: inherit; font-size: 14px; width: 100%; min-height: 38px; resize: vertical; padding: 8px 10px; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+textarea::placeholder { color: var(--muted); }
+textarea:disabled { background: transparent; }
+
+.done ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 65ch; }
+@media (max-width: 520px) {
+  .case { grid-template-columns: 1fr; }
+  .case dl { grid-template-columns: 1fr; gap: 0; }
+  .case dd { margin-bottom: 6px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">SISTEMA · AMBIENTE · VERSAO</span>
+    <h1>Roteiro de testes do NOME</h1>
+    <p>O que este roteiro valida. Marque o resultado de cada caso; todos que abrirem a página veem as marcações.</p>
+    <div class="notice">
+      <p><strong>Aviso principal</strong> (ex.: use equipamento de bancada, o ambiente chama sistemas de produção).</p>
+    </div>
+    <p>Em cada caso confira: o que olhar (tela, campo, log).</p>
+    <div class="sync" id="sync" role="status">Carregando resultados…</div>
+  </header>
+
+  <div class="summary" id="summary" aria-label="Resumo"></div>
+
+  <div id="phases"></div>
+
+  <section class="done">
+    <h2>Já coberto por teste automatizado</h2>
+    <ul>
+      <li><strong>Repo:</strong> N testes passando, incluindo ...</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const PHASES = [
+  { id: 1, title: "Fase 1: testável agora", note: "Com o que já está no ar." },
+  { id: 2, title: "Fase 2: depois do deploy ou merge", tag: "Aguarda deploy", note: "Depende de código ainda não publicado." }
+];
+const CAMADAS = { 1: "Unidade", 2: "Serviço", 3: "Integração", 4: "Ponta a ponta" };
+// [número, fase, camada (1-4), título, como provocar, esperado] — HTML permitido nos textos
+const CASES = [
+  [1, 1, 2, "Caso de exemplo", "Como provocar", "O que deve acontecer"],
+  [2, 2, 4, "Caso que depende do deploy", "Como provocar", "O que deve acontecer"]
+].map(([n, fase, camada, titulo, como, esperado]) => ({ id: "c" + String(n).padStart(2, "0"), n, fase, camada, titulo, como, esperado }));
+
+const STATUS = [["ok", "Passou"], ["falha", "Falhou"], ["bloq", "Bloqueado"]];
+const state = {};
+const els = {};
+let db = null, user = null, uid = null, canWrite = false;
+const queues = {};
+const syncEl = document.getElementById("sync");
+
+function build() {
+  const root = document.getElementById("phases");
+  root.style.display = "flex"; root.style.flexDirection = "column"; root.style.gap = "28px";
+  for (const ph of PHASES) {
+    const sec = document.createElement("section");
+    sec.className = "phase";
+    sec.innerHTML = `<div class="phase-head"><h2>${ph.title}</h2>${ph.tag ? `<span class="tag">${ph.tag}</span>` : ""}<span class="count" id="count-${ph.id}"></span></div><p class="phase-note">${ph.note}</p>`;
+    for (const c of CASES.filter(c => c.fase === ph.id)) {
+      const art = document.createElement("article");
+      art.className = "case";
+      art.innerHTML = `<div class="num">${String(c.n).padStart(2, "0")}</div>
+        <div class="body">
+          <span class="tag camada">${CAMADAS[c.camada]}</span>
+          <h3>${c.titulo}</h3>
+          <dl><dt>Como provocar</dt><dd>${c.como}</dd><dt>Esperado</dt><dd>${c.esperado}</dd></dl>
+          <div class="controls">
+            <div class="seg" role="group" aria-label="Resultado do caso ${c.n}">
+              ${STATUS.map(([v, l]) => `<button type="button" id="${c.id}-${v}" data-v="${v}" aria-pressed="false" disabled>${l}</button>`).join("")}
+            </div>
+            <span class="meta"></span>
+          </div>
+          <textarea id="${c.id}-nota" rows="1" maxlength="2000" placeholder="Evidência: o que apareceu, Id do registro, saída, link do log" aria-label="Observação do caso ${c.n}" disabled></textarea>
+        </div>`;
+      const buttons = [...art.querySelectorAll(".seg button")];
+      const nota = art.querySelector("textarea");
+      buttons.forEach(b => b.addEventListener("click", () => {
+        const cur = state[c.id] || {};
+        change(c.id, { status: cur.status === b.dataset.v ? "" : b.dataset.v });
+      }));
+      nota.addEventListener("change", () => {
+        if ((state[c.id]?.nota || "") !== nota.value) change(c.id, { nota: nota.value });
+      });
+      els[c.id] = { art, buttons, nota, meta: art.querySelector(".meta") };
+      sec.appendChild(art);
+    }
+    root.appendChild(sec);
+  }
+}
+
+function change(id, patch) {
+  if (!db || !canWrite) return;
+  const body = { status: "", nota: "", ...(state[id] || {}), ...patch, por: uid, em: new Date().toISOString() };
+  state[id] = body;
+  apply(id); summarize(); names();
+  queues[id] = (queues[id] || Promise.resolve()).then(() => db.doc("resultados/" + id).set(body)).catch(e => {
+    if (e && e.code === "invalid_argument") { canWrite = false; setEnabled(); }
+    syncEl.className = "sync err";
+    syncEl.textContent = e && e.code === "invalid_argument"
+      ? "Você não tem permissão para marcar resultados nesta página. Peça acesso de colaborador a quem compartilhou."
+      : "A última marcação não foi salva. Marque de novo em alguns segundos.";
+  });
+}
+
+function apply(id) {
+  const e = els[id]; if (!e) return;
+  const s = state[id] || {};
+  e.art.dataset.status = s.status || "";
+  e.buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === s.status)));
+  if (document.activeElement !== e.nota) e.nota.value = s.nota || "";
+}
+
+function setEnabled() {
+  for (const id in els) {
+    els[id].buttons.forEach(b => b.disabled = !canWrite);
+    els[id].nota.disabled = !canWrite;
+  }
+}
+
+function summarize() {
+  const tally = list => {
+    const t = { ok: 0, falha: 0, bloq: 0, total: list.length };
+    list.forEach(c => { const s = state[c.id]?.status; if (s) t[s]++; });
+    t.pend = t.total - t.ok - t.falha - t.bloq;
+    return t;
+  };
+  const all = tally(CASES);
+  document.getElementById("summary").innerHTML =
+    `<div class="stat ok"><b>${all.ok}</b><span>passaram</span></div>
+     <div class="stat bad"><b>${all.falha}</b><span>falharam</span></div>
+     <div class="stat hold"><b>${all.bloq}</b><span>bloqueados</span></div>
+     <div class="stat"><b>${all.pend}</b><span>de ${all.total} ainda sem teste</span></div>`;
+  for (const ph of PHASES) {
+    const t = tally(CASES.filter(c => c.fase === ph.id));
+    document.getElementById("count-" + ph.id).textContent = `${t.total - t.pend} de ${t.total} testados`;
+  }
+}
+
+async function names() {
+  const ids = [...new Set(Object.values(state).map(s => s.por).filter(Boolean))];
+  const ps = user && ids.length ? await user.profiles(ids) : {};
+  for (const id in els) {
+    const s = state[id];
+    if (!s || !s.em || (!s.status && !s.nota)) { els[id].meta.textContent = ""; continue; }
+    const quando = new Date(s.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const quem = s.por && ps[s.por] ? (ps[s.por].isMe ? "você" : ps[s.por].name) : "";
+    els[id].meta.textContent = (quem ? quem + " · " : "") + quando;
+  }
+}
+
+async function start() {
+  build(); summarize();
+  db = await window.claude?.use?.("db") ?? null;
+  user = await window.claude?.use?.("user") ?? null;
+  if (!db) {
+    syncEl.textContent = "As marcações não estão disponíveis nesta visualização. Entre na sua conta para ver e registrar resultados.";
+    return;
+  }
+  uid = user ? await user.id() : null;
+  canWrite = (user ? await user.can("data.write") : null) !== false;
+  setEnabled();
+  if (!canWrite) syncEl.textContent = "Você está vendo os resultados em modo leitura.";
+  const timer = setTimeout(() => {
+    syncEl.textContent = "Os resultados ainda não carregaram. O que aparece pode estar desatualizado.";
+  }, 10000);
+  db.collection("resultados").onSnapshot(snap => {
+    for (const id in state) delete state[id];
+    snap.docs.forEach(d => { if (els[d.id]) state[d.id] = { ...d.data() }; });
+    for (const id in els) apply(id);
+    summarize(); names();
+    if (!snap.metadata.fromCache) {
+      clearTimeout(timer);
+      if (canWrite && !syncEl.classList.contains("err")) syncEl.textContent = "";
+    }
+  }, () => {
+    clearTimeout(timer);
+    syncEl.className = "sync err";
+    syncEl.textContent = "Não foi possível carregar os resultados. Reabra a página mais tarde.";
+  });
+}
+start();
+</script>

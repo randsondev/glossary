@@ -12,6 +12,7 @@
 - Diga o que foi realmente verificado. Compilar, publicar ou comparar um arquivo não comprova o funcionamento completo.
 - Respeite a ordem de trabalho combinada, inclusive testes deixados para o final. Até executá-los, informe essa pendência.
 - Ao testar scripts que gravam dados, preserve alterações manuais do usuário; prefira simulação ou rollback quando isso atender à verificação.
+- Para testar, validar ou corrigir um defeito, siga também a skill `testar`: ela cuida da verificação (regressão antes de corrigir, teste por camada); o tamanho da correção continua com o `ponytail`.
 - Após duas tentativas sem progresso, troque a checagem. Use um subagente crítico somente em leitura quando houver hipótese central sem evidência ou decisão difícil de reverter; o principal verifica os apontamentos e decide.
 - Ao concluir, informe o resultado, a verificação e as pendências, de forma curta.
 
