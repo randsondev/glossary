@@ -22,7 +22,7 @@ jobs:
       - name: validate
         run: node scripts/validate.mjs --skills-ref --no-extra
       - name: testes de unidade
-        run: node --test scripts/ ai-memory/
+        run: node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs'
       - name: guard
         env:
           GUARD_DENY: ${{ secrets.GUARD_DENY }}

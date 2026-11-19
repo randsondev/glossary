@@ -62,7 +62,7 @@ templates/skill/SKILL.md        modelo para skill nova
 
 ## Testes
 
-- `node --test scripts/ ai-memory/`: testes de unidade.
+- `node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs'`: testes de unidade.
 - `node scripts/e2e.mjs`: instala tudo numa pasta pessoal temporária, com outra porta e o ai-memory como processo, sem tocar na instalação desta máquina; `--from main` instala a main antes e atualiza em cima dela.
 - `node glossary.mjs --check --deep`: na instalação real, faz uma chamada MCP e pergunta ao Claude Code se os servidores conectam. O `./install.sh` termina com ela.
 - Toda correção (`fix:`) vem com o teste que reproduz o defeito, num `*.test.mjs` ou num passo do `scripts/e2e.mjs`.
