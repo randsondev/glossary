@@ -7,6 +7,7 @@
 //
 // Os dados ficam em ~/Library/Application Support/ai-memory (macOS) ou ~/.local/share/ai-memory
 // (Linux) e nunca entram em repositório. Backup: ai-memory backup --to <arquivo>.
+import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -65,7 +66,12 @@ export const paths = {
 const configFile = path.join(paths.data, 'config.toml');
 const config = fs.existsSync(configFile) ? fs.readFileSync(configFile, 'utf8').split(/^\s*\[/m)[0] : '';
 const setting = (key) => new RegExp(`^\\s*${key}\\s*=\\s*["']([^"']+)["']`, 'm').exec(config)?.[1];
-const BASE_URL = (setting('server_url') || `http://${setting('bind') || '127.0.0.1:49374'}`).replace(/\/$/, '');
+// GLOSSARY_AI_MEMORY_BIND escolhe outra porta na primeira instalação (o teste de instalação usa para não
+// bater no servidor de verdade); depois vale o bind gravado no config.toml.
+const BIND = process.env.GLOSSARY_AI_MEMORY_BIND;
+const BASE_URL = (setting('server_url') || `http://${setting('bind') || BIND || '127.0.0.1:49374'}`).replace(/\/$/, '');
+// GLOSSARY_AI_MEMORY_SERVICE=process sobe o servidor como processo, sem launchd nem systemd (teste de instalação).
+const AS_PROCESS = process.env.GLOSSARY_AI_MEMORY_SERVICE === 'process';
 export const MCP_URL = `${BASE_URL}/mcp`;
 // Como o install-hooks grava o endereço em cada hook. Hook com outra porta conta como não ligado.
 export const HOOKS_URL = `--server-url ${BASE_URL}`;
@@ -142,8 +148,9 @@ function installBinary({ dryRun }) {
 
 function initData({ dryRun }) {
   log.step('Pasta de dados');
-  if (fs.existsSync(path.join(paths.data, 'config.toml'))) return log.ok(`já existe: ${tilde(paths.data)}`);
+  if (fs.existsSync(configFile)) return log.ok(`já existe: ${tilde(paths.data)}`);
   if (runQuiet(BIN, ['init'], { dryRun }) !== 0) die('ai-memory init falhou');
+  if (BIND && !dryRun) fs.writeFileSync(configFile, fs.readFileSync(configFile, 'utf8').replace(/^bind = ".*"$/m, `bind = "${BIND}"`));
 }
 
 // ---------- 2. LLM ----------
@@ -282,6 +289,7 @@ function waitUnloaded() {
 }
 
 function startService(env, { dryRun, binaryChanged }) {
+  if (AS_PROCESS) return startProcess(env, { dryRun, binaryChanged });
   log.step(MAC ? 'Serviço (launchd)' : 'Serviço (systemd --user)');
   if (MAC) {
     // O modelo do plist vem no pacote; no dry-run da primeira instalação ele ainda não existe.
@@ -321,8 +329,31 @@ function startService(env, { dryRun, binaryChanged }) {
   }
 }
 
+// Servidor como processo solto, com o pid em <dados>/serve.pid; quem o sobe (o teste) o encerra.
+function startProcess(env, { dryRun, binaryChanged }) {
+  log.step('Servidor (processo, sem serviço do sistema)');
+  const pidFile = path.join(paths.data, 'serve.pid');
+  const pid = Number(fs.existsSync(pidFile) && fs.readFileSync(pidFile, 'utf8'));
+  const alive = pid > 0 && run('kill', ['-0', String(pid)]).code === 0;
+  if (alive && !binaryChanged) return log.ok(`servidor já rodando (pid ${pid})`);
+  if (dryRun) return log.dry(`subiria ${tilde(BIN)} serve --transport http --enable-web como processo`);
+  if (alive) process.kill(pid);
+  fs.mkdirSync(paths.logs, { recursive: true });
+  const out = fs.openSync(path.join(paths.logs, 'serve.log'), 'a');
+  const child = spawn(BIN, ['serve', '--transport', 'http', '--enable-web'], {
+    detached: true,
+    stdio: ['ignore', out, out],
+    env: { ...process.env, ...env },
+  });
+  child.unref();
+  fs.writeFileSync(pidFile, String(child.pid));
+  log.ok(`servidor subiu como processo (pid ${child.pid})`);
+  return 'manual';
+}
+
 // Serviço carregado mas sem responder (travou, ficou num estado ruim): reinicia o processo.
 function restartService() {
+  if (AS_PROCESS) return;
   log.warn('o servidor não respondeu; reiniciando o serviço');
   if (MAC) runLive('launchctl', ['kickstart', '-k', `gui/${process.getuid()}/${LABEL}`]);
   else runLive('systemctl', ['--user', 'restart', 'ai-memory']);
@@ -353,6 +384,35 @@ export const mcpStatus = () => {
   const token = mcpToken();
   return httpStatus(MCP_URL, token ? { Authorization: `Bearer ${token}` } : {});
 };
+
+// Chamada MCP de verdade (initialize + tools/call), como um agente faria. Devolve o texto do resultado ou lança.
+export async function mcpCall(tool, args = {}) {
+  const token = mcpToken();
+  let session;
+  const post = async (body) => {
+    const res = await fetch(MCP_URL, {
+      method: 'POST',
+      signal: AbortSignal.timeout(15000),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(session && { 'Mcp-Session-Id': session }),
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', ...body }),
+    });
+    session ||= res.headers.get('mcp-session-id');
+    if (!res.ok) throw new Error(`${body.method}: HTTP ${res.status}`);
+    const text = await res.text();
+    const json = text.trim().startsWith('{') ? text : text.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5)).pop();
+    return json ? JSON.parse(json) : {};
+  };
+  await post({ id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'glossary-check', version: '1' } } });
+  await post({ method: 'notifications/initialized' });
+  const r = await post({ id: 2, method: 'tools/call', params: { name: tool, arguments: args } });
+  if (r.error || r.result?.isError) throw new Error(`${tool}: ${JSON.stringify(r.error || r.result.content)}`);
+  return r.result.content?.map((c) => c.text).join('\n') || '';
+}
 
 // Ponte stdio do ai-memory: lê o token do data dir ao subir, então funciona com ou sem bearer token e o
 // segredo não vai para a config do agente. Pela URL pura, uma instalação com token responde 401.

@@ -127,7 +127,11 @@ export function wireAgentsMd({ agents, dryRun = false, unlink = false }) {
     const current = conf.hooks?.sessionStart || [];
     const others = current.filter((x) => !isOurCursorHook(x));
     const wanted = unlink ? others : [...others, CURSOR_HOOK];
-    if (JSON.stringify(current) === JSON.stringify(wanted)) {
+    // A ordem não importa: o ai-memory acrescenta o hook dele depois do nosso, e reordenar a cada instalação
+    // regravava o hooks.json (com backup) toda vez.
+    const ours = current.filter(isOurCursorHook);
+    const same = unlink ? !ours.length : ours.length === 1 && JSON.stringify(ours[0]) === JSON.stringify(CURSOR_HOOK);
+    if (same) {
       if (!unlink) log.ok('cursor: hook sessionStart das regras gerais já ligado');
     } else {
       if (!dryRun && fs.existsSync(CURSOR_HOOKS)) backupFile(CURSOR_HOOKS);

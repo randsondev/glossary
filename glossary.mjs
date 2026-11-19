@@ -6,6 +6,7 @@
 //                     [--llm none|anthropic|anthropic-oauth] [--model <id>]
 //                     [--memories keep|off] [--trusted "<glob>"]
 //   node glossary.mjs --check     confere a instalação inteira, sem alterar nada
+//   node glossary.mjs --check --deep   também faz uma chamada MCP real e pergunta ao Claude Code se os servidores conectam
 //
 // Para instalar do zero, prefira ./install.sh, que faz as perguntas antes e roda tudo em ordem.
 //
@@ -37,6 +38,7 @@ const { values } = parseArgs({
     memories: { type: 'string' },
     trusted: { type: 'string' },
     check: { type: 'boolean' },
+    deep: { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -48,7 +50,7 @@ if (values.help) {
   process.exit(0);
 }
 
-if (values.check) process.exit(await check({ agents: values.agents ? resolveAgents(values.agents) : undefined }));
+if (values.check) process.exit(await check({ agents: values.agents ? resolveAgents(values.agents) : undefined, deep: values.deep }));
 
 const dryRun = Boolean(values['dry-run']);
 setAssumeYes(values.yes);

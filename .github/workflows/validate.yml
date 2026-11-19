@@ -21,6 +21,8 @@ jobs:
         run: pipx install skills-ref==0.1.1
       - name: validate
         run: node scripts/validate.mjs --skills-ref --no-extra
+      - name: testes de unidade
+        run: node --test scripts/ ai-memory/
       - name: guard
         env:
           GUARD_DENY: ${{ secrets.GUARD_DENY }}
@@ -32,3 +34,25 @@ jobs:
           else
             node scripts/guard.mjs --all --require-deny
           fi
+
+  # Instala tudo numa pasta pessoal temporária (porta própria, servidor como processo) e confere:
+  # conferência --deep, hook gravando na memória e segunda instalação sem mudar arquivo.
+  # Em PR e no disparo do sync, instala a main antes e atualiza em cima dela.
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - name: Claude Code (o registro do Serena e a conferência --deep usam a CLI)
+        run: npm install -g @anthropic-ai/claude-code@2.1.327
+      - name: instalação de ponta a ponta
+        run: node scripts/e2e.mjs ${{ github.event_name != 'push' && '--from origin/main' || '' }}

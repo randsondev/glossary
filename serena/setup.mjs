@@ -70,8 +70,10 @@ async function ensureBinary({ dryRun }) {
   const uv = which('uv');
   if (!uv) die('uv não encontrado (https://docs.astral.sh/uv/). Instale o uv e rode de novo.');
   const msg = current ? `Serena ${current} -> ${version}` : `instalar Serena ${version}`;
-  if (!dryRun && !(await confirm(`${msg} com "uv tool install --force ${pkg}==${version}"?`))) return bin;
-  if (runQuiet(uv, ['tool', 'install', '--force', `${pkg}==${version}`], { dryRun }) !== 0) die('uv tool install falhou');
+  if (!dryRun && !(await confirm(`${msg} com "uv tool install --force --python 3.13 ${pkg}==${version}"?`))) return bin;
+  // O serena-agent aceita Python 3.9, mas uma dependência dele (sensai) só roda do 3.10 em diante: num Mac só
+  // com o Python do sistema (3.9) o serena init quebrava. O uv baixa o 3.13 se ele não estiver instalado.
+  if (runQuiet(uv, ['tool', 'install', '--force', '--python', '3.13', `${pkg}==${version}`], { dryRun }) !== 0) die('uv tool install falhou');
   if (dryRun) return bin || path.join(HOME, '.local', 'bin', 'serena');
   bin = findSerena();
   if (!bin) die('serena instalado, mas fora do PATH; rode "uv tool update-shell" e abra outro terminal');

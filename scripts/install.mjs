@@ -206,7 +206,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
   writeJSON(INSTALL_FILE, { agents, memoryAgents, serena, history: asked, updated: new Date().toISOString().slice(0, 10) });
 
   log.step('Conferência');
-  const result = await check({ agents });
+  const result = await check({ agents, deep: true });
 
   log.step('Próximos passos');
   log.info('1. Recarregue o VS Code ("Developer: Reload Window") e reinicie o Cursor.');
