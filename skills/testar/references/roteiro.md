@@ -9,7 +9,7 @@ Uma página com checklist que o usuário e outras pessoas marcam, e onde você g
 1. `Artifact` `quickstart` (intent `other`, `design_systems: false`) e carregue a skill `artifact-capabilities` antes de declarar as capabilities.
 2. Copie [`roteiro-template.html`](roteiro-template.html) para o scratchpad e troque o cabeçalho (sistema, ambiente, branch, aviso), `PHASES`, `CASES` (`[n, fase, camada, título, como, esperado]`, HTML permitido) e a seção "Já coberto".
 3. Publique com `capabilities: {db: {}, user: {}}`, icon `checklist` e título "Roteiro: <mudança>". Cada caso vira o documento `resultados/cNN` com `{status, nota, por, em}`.
-4. Para gravar um caso: `ArtifactData` `list` (collection `resultados`) e depois `update` em `resultados/cNN` com `{status, nota: "Claude: <o que rodou e o que voltou>", por: "", em: <ISO>}`. O `update` mantém a nota que outra pessoa já escreveu.
+4. Para gravar: `ArtifactData` `list` (collection `resultados`) e depois, num `batch` só, `set` nos casos ainda sem documento e `update` com o `if_version` lido nos que já existem, em `resultados/cNN` com `{status, nota: "Claude: <o que rodou e o que voltou>", por: "", em: <ISO>}`. Se o caso já tem nota do usuário, junte a sua à dele em vez de substituir.
 5. A página nasce privada. Para outra pessoa marcar, o usuário compartilha como **Colaborador** (Visualizador só lê).
 
 ## Sem a ferramenta `Artifact` (Codex, Cursor, Hermes, OpenClaw, OpenClaude)

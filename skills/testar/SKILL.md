@@ -1,6 +1,6 @@
 ---
 name: testar
-description: "Testa uma mudança funcionando de verdade, por camadas (unidade, serviço, integração, ponta a ponta), roda a regressão antes de qualquer correção e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um defeito. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
+description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
 ---
 # testar
 
