@@ -1,8 +1,8 @@
 ---
-name: testar
+name: validar-mudanca
 description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
 ---
-# testar
+# validar-mudanca
 
 Quando o usuário diz **testar**, ele quer ver a mudança funcionando como caso real: o comando rodando, o registro gravado, a tela respondendo, a integração recebendo. O entregável é o **roteiro**: os casos por camada, cada um com resultado e evidência. Pedido de testar não é pedido de escrever teste automatizado: classe ou suíte nova só quando ele pedir com essas palavras, ou no caminho de correção abaixo.
 
