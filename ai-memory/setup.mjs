@@ -453,6 +453,8 @@ function startService(env, { dryRun, binaryChanged }) {
 }
 
 // Servidor como processo solto, com o pid em <dados>/serve.pid; quem o sobe (o teste) o encerra.
+const readTail = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim().split('\n').slice(-15).join('\n') : '(sem log)');
+
 function startProcess(env, { dryRun, binaryChanged }) {
   log.step('Servidor (processo, sem serviço do sistema)');
   const pidFile = path.join(paths.data, 'serve.pid');
@@ -460,7 +462,9 @@ function startProcess(env, { dryRun, binaryChanged }) {
   const running = alive(pid);
   if (running && !binaryChanged) return log.ok(`servidor já rodando (pid ${pid})`);
   if (dryRun) return log.dry(`subiria ${tilde(BIN)} serve --transport http --enable-web como processo`);
+  // O SIGTERM não é imediato: subir o novo antes de o antigo sair dá porta ocupada e o novo morre.
   if (running) process.kill(pid);
+  for (let i = 0; i < 30 && running && alive(pid); i++) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
   fs.mkdirSync(paths.logs, { recursive: true });
   const out = fs.openSync(path.join(paths.logs, 'serve.log'), 'a');
   const child = spawn(BIN, ['serve', '--transport', 'http', '--enable-web'], {
@@ -987,7 +991,9 @@ export async function setup({ dryRun = false, agents, llm, model, uninstall: off
     const where = WIN
       ? `rode "${BIN}" serve --transport http num terminal para ver o erro`
       : `veja ${MAC ? tilde(path.join(paths.logs, 'stderr.log')) : 'journalctl --user -u ai-memory'}`;
-    log.err(`${MCP_URL} não respondeu; ${where}`);
+    log.err(`${MCP_URL} não respondeu; ${AS_PROCESS ? `fim de ${tilde(path.join(paths.logs, 'serve.log'))}:` : where}`);
+    // Como processo (teste de instalação), o log vai junto: no CI é o único jeito de ver a causa.
+    if (AS_PROCESS) log.info(readTail(path.join(paths.logs, 'serve.log')));
     return 1;
   }
   await webLogin({ dryRun });
