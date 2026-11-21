@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { guard } from './guard.mjs';
-import { REPO, compareVersions, copyDir, hashDir, isMain, listSkills, log, readJSON, run, sha256File, writeJSON } from './lib.mjs';
+import { REPO, aiMemoryAsset, compareVersions, copyDir, hashDir, isMain, listSkills, log, readJSON, run, sha256File, writeJSON } from './lib.mjs';
 
 const SOURCES = path.join(REPO, 'sources.json');
 const LOCK = path.join(REPO, 'sources.lock.json');
@@ -143,7 +143,7 @@ function syncAiMemory(sources, lock, { dryRun, changes }) {
     }
     const assets = {};
     for (const p of conf.platforms) {
-      const name = `ai-memory-${p}.tar.gz`;
+      const name = aiMemoryAsset(p);
       const body = curl(`${conf.repo}/releases/download/${version}/${name}.sha256`);
       const hash = body && /^([0-9a-f]{64})\s/.exec(body)?.[1];
       if (!hash) {

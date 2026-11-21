@@ -19,6 +19,12 @@ import { parseArgs } from 'node:util';
 import { REPO, log, which } from './lib.mjs';
 
 const { values } = parseArgs({ options: { from: { type: 'string' }, keep: { type: 'boolean' } } });
+// No Windows, o ai-memory e o Claude Code acham a pasta pessoal pela API do sistema e não pelo HOME:
+// a "pasta pessoal temporária" não isolaria nada e o teste mexeria na instalação desta máquina.
+if (process.platform === 'win32') {
+  log.err('o e2e ainda não roda no Windows (não dá para isolar a pasta pessoal); use node glossary.mjs --dry-run e --check');
+  process.exit(1);
+}
 const AGENTS = 'claude,cursor,codex,openclaw';
 
 const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'glossary-e2e-')));

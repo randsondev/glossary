@@ -1,0 +1,4 @@
+# Quebra de linha LF em todas as plataformas: o vendor/ é conferido pelo sha256 do conteúdo,
+# e o Git do Windows (core.autocrlf=true) trocaria por CRLF no checkout.
+* text=auto eol=lf
+*.cmd text eol=crlf

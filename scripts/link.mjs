@@ -18,6 +18,7 @@ import {
   hermesHooks,
   hermesProfiles,
   isMain,
+  linkDir,
   listSkills,
   log,
   needsCodexPolicy,
@@ -134,13 +135,13 @@ export async function link({ dryRun = false, agents, noClaudeDir = false, unlink
         st = fs.lstatSync(dest);
       } catch {}
       if (!st) {
-        act(`+ ${name} -> ${tilde(skill.dir)}`, () => fs.symlinkSync(skill.dir, dest));
+        act(`+ ${name} -> ${tilde(skill.dir)}`, () => linkDir(skill.dir, dest));
         counts.criados++;
       } else if (st.isSymbolicLink()) {
         const cur = linkTarget(dest);
         if (cur === skill.dir) counts.iguais++;
         else if (isUnder(cur, managed)) {
-          act(`~ ${name} -> ${tilde(skill.dir)}`, () => (fs.unlinkSync(dest), fs.symlinkSync(skill.dir, dest)));
+          act(`~ ${name} -> ${tilde(skill.dir)}`, () => (fs.unlinkSync(dest), linkDir(skill.dir, dest)));
           counts.atualizados++;
         } else {
           log.warn(`${name}: já existe symlink para ${tilde(cur)}; não mexo`);

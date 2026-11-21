@@ -2,7 +2,7 @@
 // Instalação guiada: faz as poucas perguntas no começo e depois roda tudo, na ordem certa,
 // sem interromper. Termina com a conferência (scripts/check.mjs).
 //
-//   ./install.sh                 (chama este script)
+//   ./install.sh                 (chama este script; no Windows, install.cmd)
 //   ./install.sh --yes           aceita as respostas padrão, sem perguntar
 //   ./install.sh --agents claude,cursor
 //   ./install.sh --export        empacota o repositório privado e a config local (para outro computador)
@@ -22,7 +22,9 @@ import { DENY_FILE, exportPrivate, importPrivate, setupPrivateRepo, writeDenyTer
 import {
   CONFIG_DIR,
   HOME,
+  INSTALL,
   REPO,
+  WIN,
   ask,
   die,
   expandHome,
@@ -180,7 +182,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
     log.err(e.message);
     memoryFailed = true;
   }
-  if (memoryFailed) log.err('a instalação do ai-memory falhou; veja as mensagens acima. Sigo com o resto; depois rode ./install.sh de novo');
+  if (memoryFailed) log.err(`a instalação do ai-memory falhou; veja as mensagens acima. Sigo com o resto; depois rode ${INSTALL} de novo`);
   // "Não" para o OpenClaude também tira a memória que uma rodada anterior tinha ligado nele.
   const oc = agents.includes('openclaude') && !memoryAgents.includes('openclaude') && which('openclaude');
   if (oc && run(oc, ['mcp', 'get', 'ai-memory']).code === 0) {
@@ -212,7 +214,7 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
   log.info('1. Recarregue o VS Code ("Developer: Reload Window") e reinicie o Cursor.');
   log.info('2. Abra uma sessão nova: as skills aparecem pelo nome (ex.: /ponytail-review).');
   log.info('3. Para conferir de novo a qualquer momento: node glossary.mjs --check');
-  log.info('4. Para atualizar: git pull && ./install.sh --yes');
+  log.info(`4. Para atualizar: git pull && ${INSTALL} --yes`);
   if (webPanel) {
     log.step(webPanel.password ? 'Painel da memória (guarde a senha: aparece só agora)' : 'Painel da memória');
     log.info(`Endereço: ${webPanel.url}`);
@@ -229,11 +231,15 @@ export async function install({ yes = false, agents: agentsFlag, importFile } = 
 
 // O Serena é instalado pelo uv; sem ele o instalador pulava o Serena calado.
 function installUv() {
-  const code = which('brew')
-    ? runQuiet('brew', ['install', 'uv'])
-    : runQuiet('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']);
-  if (code !== 0) die('não deu para instalar o uv; instale com "brew install uv" e rode ./install.sh de novo');
-  // O instalador oficial põe o uv em ~/.local/bin, que pode não estar no PATH deste processo.
+  // No Windows, o instalador oficial em PowerShell (sem administrador).
+  const code = WIN
+    ? runQuiet('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'ByPass', '-Command', 'irm https://astral.sh/uv/install.ps1 | iex'])
+    : which('brew')
+      ? runQuiet('brew', ['install', 'uv'])
+      : runQuiet('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']);
+  const hint = WIN ? 'winget install astral-sh.uv' : 'brew install uv';
+  if (code !== 0) die(`não deu para instalar o uv; instale com "${hint}" e rode ${INSTALL} de novo`);
+  // O instalador oficial põe o uv em ~/.local/bin (no Windows, %USERPROFILE%\.local\bin), que pode não estar no PATH deste processo.
   process.env.PATH = `${path.join(HOME, '.local', 'bin')}${path.delimiter}${process.env.PATH}`;
 }
 

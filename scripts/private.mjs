@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { AGENTS, CONFIG_DIR, HOME, REPO, die, expandHome, extraRoots, listSkills, log, readJSON, run, tilde, writeJSON } from './lib.mjs';
+import { AGENTS, CONFIG_DIR, HOME, INSTALL, REPO, TAR, die, expandHome, extraRoots, listSkills, log, readJSON, run, tilde, writeJSON } from './lib.mjs';
 
 // Os repositórios ficam ao lado do glossary (ex.: ~/projetos/glossary-internal).
 const BASE = path.dirname(REPO);
@@ -18,7 +18,7 @@ const PROJECTS_FILE = path.join(CONFIG_DIR, 'projects.json');
 const README = `# glossary-internal
 
 Skills com dado da empresa. Este repositório fica só nesta máquina: não adicione remote e não envie
-para servidor nenhum. Para levar a outro computador: \`./install.sh --export\` no glossary.
+para servidor nenhum. Para levar a outro computador: \`${INSTALL} --export\` no glossary.
 
 - Uma pasta por skill: \`skills/<nome>/SKILL.md\` (modelo em \`templates/skill\` do glossary).
 - Depois de criar ou remover uma skill, rode \`node scripts/link.mjs\` no glossary.
@@ -79,7 +79,7 @@ function isBlankRepo(dir) {
 }
 
 const tar = (args) => {
-  const r = run('tar', args);
+  const r = run(TAR, args);
   if (r.code !== 0) die(`tar falhou: ${(r.stderr || r.stdout).trim()}`);
 };
 
@@ -106,7 +106,7 @@ export function exportPrivate(out = path.join(HOME, 'glossary-privado.tar.gz')) 
     const skills = manifest.roots.reduce((n, r) => n + listSkills(path.join(stage, 'repos', r.repo, r.sub), { nested: true }).length, 0);
     log.ok(`${tilde(out)}: ${skills} skill(s) privada(s) e ${configs.length} arquivo(s) de config`);
     log.warn('O pacote tem dados da empresa. Leve por pendrive ou pela rede local (scp), nunca por nuvem, e-mail ou mensageiro.');
-    log.info(`No outro computador: ./install.sh --import ${tilde(out)}. Depois apague o pacote nos dois.`);
+    log.info(`No outro computador: ${INSTALL} --import ${tilde(out)}. Depois apague o pacote nos dois.`);
     return 0;
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });
@@ -120,7 +120,7 @@ export function importPrivate(file) {
   try {
     tar(['xzf', file, '-C', stage]);
     const manifest = readJSON(path.join(stage, 'manifest.json'), null);
-    if (!manifest) die(`${tilde(file)} não é um pacote gerado por ./install.sh --export`);
+    if (!manifest) die(`${tilde(file)} não é um pacote gerado por ${INSTALL} --export`);
     log.step('Importar o pacote do outro computador');
 
     for (const name of new Set(manifest.roots.map((r) => r.repo))) {
@@ -157,7 +157,7 @@ export function importPrivate(file) {
       const dir = src.startsWith(from + path.sep) ? path.join(BASE, path.relative(from, src)) : src;
       if (have.has(dir)) continue;
       if (!fs.existsSync(dir)) {
-        log.warn(`${tilde(dir)} não existe aqui; clone o projeto e rode ./install.sh para adicioná-lo`);
+        log.warn(`${tilde(dir)} não existe aqui; clone o projeto e rode ${INSTALL} para adicioná-lo`);
         continue;
       }
       local.projects.push({ ...p, dir: tilde(dir) });

@@ -176,12 +176,13 @@
     }
   },
   "aiMemory": {
-    "version": "v3.4.7",
+    "version": "v3.5.1",
     "assets": {
-      "macos-aarch64": "7f3c279f04e13781c9b0b75d7b9ff9e4c2bf99629c018e92073b7da2f538673d",
-      "macos-x86_64": "91610afc01148f910a3250bb525c74c328aac418c7279ea67e531f9292422a55",
-      "linux-x86_64": "97d1954d4bdef549f4b39d169434ca6741d0755dd3135ab78da8c22e812f8bad",
-      "linux-aarch64": "020615f4d761b48629e09981ec5d7f8702faa197ff9613e6b793fe326175eedf"
+      "macos-aarch64": "fda158379dc03331e5c71ab6b702a9335c7fc41e75dda4a2b1a7d1e8e98aaf04",
+      "macos-x86_64": "49ff09af2eb904abf077a4a2a87660cad7800c6d6f4843abcab487f9315577c9",
+      "linux-x86_64": "0e82461025db99cc8794b07708b43953ea111ffa7f26592ff896bbf64eb412bb",
+      "linux-aarch64": "120514a9279ee1d8036153da430feef25091477081030337c63bbee1c93be7eb",
+      "windows-x86_64": "867da04c121910b019d4525c7afcdbd300eefebf310b3f5112bd19a043c211ef"
     }
   },
   "serena": {

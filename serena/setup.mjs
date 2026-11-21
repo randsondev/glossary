@@ -12,7 +12,9 @@ import { parseArgs } from 'node:util';
 import {
   CODEX_HOME,
   HOME,
+  INSTALL,
   REPO,
+  WIN,
   backupFile,
   checkHermes,
   hermesProfiles,
@@ -55,7 +57,7 @@ export function argsOk(args, agent) {
 // ---------- binário ----------
 
 export function findSerena() {
-  return which('serena') || [path.join(HOME, '.local', 'bin', 'serena')].find((p) => fs.existsSync(p)) || null;
+  return which('serena') || [path.join(HOME, '.local', 'bin', WIN ? 'serena.exe' : 'serena')].find((p) => fs.existsSync(p)) || null;
 }
 
 async function ensureBinary({ dryRun }) {
@@ -68,13 +70,14 @@ async function ensureBinary({ dryRun }) {
     return bin;
   }
   const uv = which('uv');
+  if (!uv && dryRun) return log.dry(`sem o uv: o ${INSTALL} instala o uv e depois ${pkg}==${version}`), path.join(HOME, '.local', 'bin', WIN ? 'serena.exe' : 'serena');
   if (!uv) die('uv não encontrado (https://docs.astral.sh/uv/). Instale o uv e rode de novo.');
   const msg = current ? `Serena ${current} -> ${version}` : `instalar Serena ${version}`;
   if (!dryRun && !(await confirm(`${msg} com "uv tool install --force --python 3.13 ${pkg}==${version}"?`))) return bin;
   // O serena-agent aceita Python 3.9, mas uma dependência dele (sensai) só roda do 3.10 em diante: num Mac só
   // com o Python do sistema (3.9) o serena init quebrava. O uv baixa o 3.13 se ele não estiver instalado.
   if (runQuiet(uv, ['tool', 'install', '--force', '--python', '3.13', `${pkg}==${version}`], { dryRun }) !== 0) die('uv tool install falhou');
-  if (dryRun) return bin || path.join(HOME, '.local', 'bin', 'serena');
+  if (dryRun) return bin || path.join(HOME, '.local', 'bin', WIN ? 'serena.exe' : 'serena');
   bin = findSerena();
   if (!bin) die('serena instalado, mas fora do PATH; rode "uv tool update-shell" e abra outro terminal');
   log.ok(`Serena ${run(bin, ['--version']).stdout.trim()} em ${tilde(bin)}`);
@@ -106,8 +109,16 @@ export function readList(lines, key) {
   }
   return lines
     .slice(b.start + 1, b.end)
-    .map((l) => l.replace(/^\s*-\s*/, '').trim().replace(/^["']|["']$/g, ''))
+    .map((l) => unquote(l.replace(/^\s*-\s*/, '').trim()))
     .filter(Boolean);
+}
+
+// Entre aspas duplas o YAML escapa como o JSON (o setup grava com JSON.stringify): no Windows, "C:\\projetos".
+function unquote(v) {
+  try {
+    if (v.startsWith('"')) return JSON.parse(v);
+  } catch {}
+  return v.replace(/^["']|["']$/g, '');
 }
 
 function setBlock(lines, key, block) {

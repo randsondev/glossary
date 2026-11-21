@@ -40,6 +40,9 @@ import {
   runWithAnswers,
   setAssumeYes,
   sha256File,
+  TAR,
+  WIN,
+  aiMemoryAsset,
   tilde,
   which,
   writeJSON,
@@ -52,11 +55,19 @@ const MAC = process.platform === 'darwin';
 const LLM_KEYS = ['AI_MEMORY_LLM_PROVIDER', 'AI_MEMORY_LLM_MODEL', 'ANTHROPIC_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
 const DEFAULT_MODEL = 'claude-haiku-4-5';
 
+// No Windows, os mesmos lugares do install.ps1 e do "ai-memory setup" oficiais.
+const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(HOME, 'AppData', 'Local');
 export const paths = {
-  install: MAC ? path.join(HOME, 'Applications', 'ai-memory') : path.join(HOME, '.local', 'opt', 'ai-memory'),
-  data: MAC
-    ? path.join(HOME, 'Library', 'Application Support', 'ai-memory')
-    : path.join(process.env.XDG_DATA_HOME || path.join(HOME, '.local', 'share'), 'ai-memory'),
+  install: WIN
+    ? path.join(LOCALAPPDATA, 'Programs', 'ai-memory')
+    : MAC
+      ? path.join(HOME, 'Applications', 'ai-memory')
+      : path.join(HOME, '.local', 'opt', 'ai-memory'),
+  data: WIN
+    ? path.join(LOCALAPPDATA, 'ai-memory')
+    : MAC
+      ? path.join(HOME, 'Library', 'Application Support', 'ai-memory')
+      : path.join(process.env.XDG_DATA_HOME || path.join(HOME, '.local', 'share'), 'ai-memory'),
   plist: path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`),
   logs: path.join(HOME, 'Library', 'Logs', 'ai-memory'),
   unit: path.join(HOME, '.config', 'systemd', 'user', 'ai-memory.service'),
@@ -75,9 +86,32 @@ const AS_PROCESS = process.env.GLOSSARY_AI_MEMORY_SERVICE === 'process';
 export const MCP_URL = `${BASE_URL}/mcp`;
 // Como o install-hooks grava o endereço em cada hook. Hook com outra porta conta como não ligado.
 export const HOOKS_URL = `--server-url ${BASE_URL}`;
-// O JSON pode trazer a barra escapada ("http:\/\/"), como o hooks.json do Cursor no ai-memory 3.4.
-export const hooksAtUrl = (file) => fs.existsSync(file) && fs.readFileSync(file, 'utf8').replaceAll('\\/', '/').includes(HOOKS_URL);
-export const BIN = path.join(paths.install, 'ai-memory');
+// Cada hook como uma linha de comando: no Windows o ai-memory grava o hook do Claude Code na forma
+// exec ({ command: "...ai-memory.exe", args: ["hook", ..., "--server-url", "http://..."] }), e não num texto só.
+export function hookLines(file) {
+  if (!fs.existsSync(file)) return [];
+  const text = fs.readFileSync(file, 'utf8');
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return [text.replaceAll('\\/', '/')];
+  }
+  const out = [];
+  const visit = (v) => {
+    if (Array.isArray(v)) return v.forEach(visit);
+    if (!v || typeof v !== 'object') return;
+    if (typeof v.command === 'string') out.push(hookLine(v));
+    Object.values(v).forEach(visit);
+  };
+  visit(data);
+  return out;
+}
+// No Windows o ai-memory grava o hook do Cursor numa linha só, com o endereço entre aspas: elas saem antes de comparar.
+export const hookLine = (h) => [String(h?.command || ''), ...(Array.isArray(h?.args) ? h.args : [])].join(' ').replaceAll('"', '');
+// O JSON pode trazer a barra escapada ("http:\/\/"), como o hooks.json do Cursor no ai-memory 3.4; o parse já resolve.
+export const hooksAtUrl = (file) => hookLines(file).some((l) => l.includes(HOOKS_URL));
+export const BIN = path.join(paths.install, WIN ? 'ai-memory.exe' : 'ai-memory');
 // Arquivos de config que o ai-memory grava em cada agente com hooks: [MCP, hooks].
 export const AGENT_FILES = {
   claude: [path.join(HOME, '.claude.json'), path.join(HOME, '.claude', 'settings.json')],
@@ -93,7 +127,7 @@ export const hasText = (file, text) => fs.existsSync(file) && fs.readFileSync(fi
 
 function platformAsset() {
   const arch = { arm64: 'aarch64', x64: 'x86_64' }[process.arch];
-  const osName = { darwin: 'macos', linux: 'linux' }[process.platform];
+  const osName = { darwin: 'macos', linux: 'linux', win32: 'windows' }[process.platform];
   if (!arch || !osName) die(`plataforma sem release do ai-memory: ${process.platform}/${process.arch}`);
   return `${osName}-${arch}`;
 }
@@ -114,7 +148,7 @@ function installBinary({ dryRun }) {
     return false;
   }
 
-  const asset = `ai-memory-${platform}.tar.gz`;
+  const asset = aiMemoryAsset(platform);
   const url = `${readJSON(path.join(REPO, 'sources.json')).aiMemory.repo}/releases/download/${version}/${asset}`;
   if (dryRun) {
     log.dry(`baixaria ${url}, conferiria o sha256 e extrairia em ${tilde(paths.install)}`);
@@ -131,14 +165,24 @@ function installBinary({ dryRun }) {
     log.ok('sha256 confere com o sources.lock.json');
     const out = path.join(tmp, 'x');
     fs.mkdirSync(out);
-    if (run('tar', ['-xzf', file, '-C', out]).code !== 0) die('não consegui extrair o tar.gz');
-    if (!fs.existsSync(path.join(out, 'ai-memory'))) die('o pacote não tem o binário ai-memory na raiz');
+    // -xf: o tar reconhece sozinho o tar.gz e, no Windows, o zip.
+    if (run(TAR, ['-xf', file, '-C', out]).code !== 0) die(`não consegui extrair o ${asset}`);
+    if (!fs.existsSync(path.join(out, path.basename(BIN)))) die(`o pacote não tem o binário ${path.basename(BIN)} na raiz`);
+    // O Windows não deixa apagar um .exe em uso: para o serviço antes de trocar.
+    if (WIN) stopWinHost();
     fs.mkdirSync(paths.install, { recursive: true });
     for (const entry of fs.readdirSync(out)) {
-      fs.rmSync(path.join(paths.install, entry), { recursive: true, force: true });
-      fs.cpSync(path.join(out, entry), path.join(paths.install, entry), { recursive: true });
+      const dest = path.join(paths.install, entry);
+      try {
+        fs.rmSync(dest, { recursive: true, force: true });
+      } catch (e) {
+        // Um hook de agente pode estar rodando o binário agora: renomear um .exe em uso o Windows deixa.
+        if (!WIN || !['EBUSY', 'EPERM'].includes(e.code)) throw e;
+        fs.renameSync(dest, `${dest}.old-${Date.now()}`);
+      }
+      fs.cpSync(path.join(out, entry), dest, { recursive: true });
     }
-    fs.chmodSync(BIN, 0o755);
+    if (!WIN) fs.chmodSync(BIN, 0o755);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -155,10 +199,16 @@ function initData({ dryRun }) {
 
 // ---------- 2. LLM ----------
 
-// Variáveis que nós mesmos gravamos no plist (macOS) ou no arquivo env (Linux).
+// Variáveis que nós mesmos gravamos no plist (macOS), no arquivo env (Linux) ou nas variáveis de
+// ambiente do usuário (Windows: o serviço sobe no logon e herda as do usuário).
 export function readServiceEnv() {
   const env = {};
-  if (MAC && fs.existsSync(paths.plist)) {
+  if (WIN) {
+    for (const k of LLM_KEYS) {
+      const m = new RegExp(`^\\s*${k}\\s+REG_\\w+\\s+(.*)$`, 'm').exec(run('reg', ['query', 'HKCU\\Environment', '/v', k]).stdout);
+      if (m) env[k] = m[1].trim();
+    }
+  } else if (MAC && fs.existsSync(paths.plist)) {
     const xml = fs.readFileSync(paths.plist, 'utf8');
     const block = /<key>EnvironmentVariables<\/key>\s*<dict>([\s\S]*?)<\/dict>/.exec(xml)?.[1] || '';
     for (const m of block.matchAll(/<key>([^<]+)<\/key>\s*<string>([^<]*)<\/string>/g)) env[m[1]] = xmlUnescape(m[2]);
@@ -288,8 +338,81 @@ function waitUnloaded() {
   for (let i = 0; i < 30 && launchdLoaded(); i++) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
 }
 
+// ---------- serviço no Windows ----------
+// Como o "ai-memory setup" oficial: um valor ai-memory em HKCU\...\Run (roda a cada logon, sem
+// administrador) com o service-host, que sobe o servidor sem janela e o reinicia se ele cair. O
+// valor tem a forma que o "ai-memory uninstall" reconhece e remove. Mexe no registro pelo
+// PowerShell e não pelo reg.exe: antivírus tratam "reg add" na chave Run como persistência maliciosa.
+const RUN_KEY = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+const HOST_ARGS = ['--data-dir', paths.data, '--config', configFile, 'service-host'];
+export const winRunCommand = () => `"${BIN}" --data-dir "${paths.data}" --config "${configFile}" service-host`;
+const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
+const powershell = (script) =>
+  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')]);
+export const winRunValue = () =>
+  powershell(`(Get-ItemProperty -Path ${psQuote(RUN_KEY)} -Name 'ai-memory' -ErrorAction SilentlyContinue).'ai-memory'`).stdout.trim();
+
+const alive = (pid) => {
+  try {
+    return pid > 0 && (process.kill(pid, 0), true);
+  } catch (e) {
+    return e.code === 'EPERM';
+  }
+};
+// O service-host grava o próprio pid e o do servidor em <dados>\service-host.json. Lê qualquer
+// campo com "pid" no nome, em qualquer nível, para não depender do formato exato do arquivo.
+function winHostPids() {
+  const pids = [];
+  const visit = (v, key = '') => {
+    if (Number.isInteger(v) && /pid/i.test(key)) pids.push(v);
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) visit(x, Array.isArray(v) ? key : k);
+  };
+  try {
+    visit(JSON.parse(fs.readFileSync(path.join(paths.data, 'service-host.json'), 'utf8')));
+  } catch {}
+  return [...new Set(pids)].filter(alive);
+}
+
+// Parada combinada com o service-host: ele vê o arquivo .stop, encerra o servidor e sai.
+function stopWinHost() {
+  if (!winHostPids().length) return;
+  const stop = path.join(paths.data, 'service-host.stop');
+  fs.writeFileSync(stop, '');
+  for (let i = 0; i < 30 && winHostPids().length; i++) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+  for (const pid of winHostPids()) run('taskkill', ['/PID', String(pid), '/T', '/F']);
+  fs.rmSync(stop, { force: true });
+}
+
+function startWinHost(env) {
+  // O service-host inicia uma cópia de si mesmo fora do console e sai na hora.
+  const r = run(BIN, HOST_ARGS, { stdio: 'ignore', timeout: 30000, env: { ...process.env, ...env } });
+  if (r.code !== 0) log.err(`service-host saiu com código ${r.code}`);
+}
+
+function startWinService(env, { dryRun, binaryChanged }) {
+  log.step('Serviço (entrada de logon do Windows)');
+  const prev = readServiceEnv();
+  const envChanged = LLM_KEYS.filter((k) => (env[k] || '') !== (prev[k] || ''));
+  const same = winRunValue() === winRunCommand();
+  if (same && !envChanged.length && !binaryChanged && winHostPids().length) return log.ok('ai-memory já roda no logon com a mesma definição');
+  if (dryRun) return log.dry(`gravaria ai-memory em ${RUN_KEY} (${winRunCommand()}) e subiria o service-host`);
+  // As variáveis do LLM ficam nas do usuário: o service-host do logon herda.
+  for (const k of envChanged) env[k] ? run('setx', [k, env[k]]) : run('reg', ['delete', 'HKCU\\Environment', '/v', k, '/f']);
+  if (envChanged.length) log.ok(`variáveis do usuário: ${envChanged.join(', ')}`);
+  if (!same) {
+    const r = powershell(
+      `New-ItemProperty -Path ${psQuote(RUN_KEY)} -Name 'ai-memory' -Value ${psQuote(winRunCommand())} -PropertyType String -Force | Out-Null`,
+    );
+    if (r.code !== 0 || winRunValue() !== winRunCommand()) die(`não consegui gravar a entrada de logon: ${(r.stderr || r.stdout).trim()}`);
+    log.ok(`${RUN_KEY}\\ai-memory gravado`);
+  }
+  stopWinHost();
+  startWinHost(env);
+}
+
 function startService(env, { dryRun, binaryChanged }) {
   if (AS_PROCESS) return startProcess(env, { dryRun, binaryChanged });
+  if (WIN) return startWinService(env, { dryRun, binaryChanged });
   log.step(MAC ? 'Serviço (launchd)' : 'Serviço (systemd --user)');
   if (MAC) {
     // O modelo do plist vem no pacote; no dry-run da primeira instalação ele ainda não existe.
@@ -334,10 +457,10 @@ function startProcess(env, { dryRun, binaryChanged }) {
   log.step('Servidor (processo, sem serviço do sistema)');
   const pidFile = path.join(paths.data, 'serve.pid');
   const pid = Number(fs.existsSync(pidFile) && fs.readFileSync(pidFile, 'utf8'));
-  const alive = pid > 0 && run('kill', ['-0', String(pid)]).code === 0;
-  if (alive && !binaryChanged) return log.ok(`servidor já rodando (pid ${pid})`);
+  const running = alive(pid);
+  if (running && !binaryChanged) return log.ok(`servidor já rodando (pid ${pid})`);
   if (dryRun) return log.dry(`subiria ${tilde(BIN)} serve --transport http --enable-web como processo`);
-  if (alive) process.kill(pid);
+  if (running) process.kill(pid);
   fs.mkdirSync(paths.logs, { recursive: true });
   const out = fs.openSync(path.join(paths.logs, 'serve.log'), 'a');
   const child = spawn(BIN, ['serve', '--transport', 'http', '--enable-web'], {
@@ -355,7 +478,8 @@ function startProcess(env, { dryRun, binaryChanged }) {
 function restartService() {
   if (AS_PROCESS) return;
   log.warn('o servidor não respondeu; reiniciando o serviço');
-  if (MAC) runLive('launchctl', ['kickstart', '-k', `gui/${process.getuid()}/${LABEL}`]);
+  if (WIN) stopWinHost(), startWinHost(readServiceEnv());
+  else if (MAC) runLive('launchctl', ['kickstart', '-k', `gui/${process.getuid()}/${LABEL}`]);
   else runLive('systemctl', ['--user', 'restart', 'ai-memory']);
 }
 
@@ -608,7 +732,7 @@ function unwireHooksFile(file, label, { dryRun = false } = {}) {
   const settings = readJSON(file, {});
   for (const [event, groups] of Object.entries(settings.hooks || {})) {
     const kept = groups
-      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !String(h.command || '').includes('ai-memory')) }))
+      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !hookLine(h).includes('ai-memory')) }))
       .filter((g) => g.hooks.length);
     if (kept.length) settings.hooks[event] = kept;
     else delete settings.hooks[event];
@@ -625,7 +749,7 @@ export function dropStaleHooks(file, { dryRun = false } = {}) {
   if (dryRun || !fs.existsSync(file)) return;
   const settings = readJSON(file, {});
   const stale = (h) => {
-    const url = /--server-url\s+(\S+)/.exec(String(h.command || ''))?.[1];
+    const url = /--server-url\s+(\S+)/.exec(hookLine(h))?.[1];
     return url && url.replace(/\/$/, '') !== BASE_URL;
   };
   let dropped = 0;
@@ -830,7 +954,11 @@ async function uninstall(agents, { dryRun }) {
   if (oc) runQuiet(oc, ['mcp', 'remove', '--scope', 'user', 'ai-memory'], { dryRun });
   if (agents.includes('openclaude')) unwireOpenclaudeHooks({ dryRun });
   if (agents.includes('codex')) unwireCodex({ dryRun });
-  if (MAC) {
+  if (WIN) {
+    // O "ai-memory uninstall --apply" acima já para o service-host e tira a entrada de logon.
+    const left = Object.keys(readServiceEnv());
+    if (left.length) log.info(`variáveis do usuário mantidas: ${left.join(', ')} (tem o token, se houver; apague com reg delete HKCU\\Environment /v <nome>)`);
+  } else if (MAC) {
     if (launchdLoaded()) runLive('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { dryRun });
     log.info(`plist mantido em ${tilde(paths.plist)} (tem o token, se houver; apague se não for usar mais)`);
   } else {
@@ -856,7 +984,10 @@ export async function setup({ dryRun = false, agents, llm, model, uninstall: off
   } else if (!manual && (restartService(), await waitHealthy(30))) {
     log.ok(`${MCP_URL} respondeu 405 depois de reiniciar o serviço`);
   } else {
-    log.err(`${MCP_URL} não respondeu; veja ${MAC ? tilde(path.join(paths.logs, 'stderr.log')) : 'journalctl --user -u ai-memory'}`);
+    const where = WIN
+      ? `rode "${BIN}" serve --transport http num terminal para ver o erro`
+      : `veja ${MAC ? tilde(path.join(paths.logs, 'stderr.log')) : 'journalctl --user -u ai-memory'}`;
+    log.err(`${MCP_URL} não respondeu; ${where}`);
     return 1;
   }
   await webLogin({ dryRun });
@@ -865,9 +996,10 @@ export async function setup({ dryRun = false, agents, llm, model, uninstall: off
 
   if (!summary) return 0;
   log.step('Para conferir');
-  if (MAC) log.info(`launchctl print gui/$(id -u)/${LABEL} | grep state`);
+  if (WIN) log.info(`Get-ItemProperty ${RUN_KEY} ai-memory`);
+  else if (MAC) log.info(`launchctl print gui/$(id -u)/${LABEL} | grep state`);
   else log.info('systemctl --user status ai-memory');
-  log.info(`curl -s -o /dev/null -w '%{http_code}\\n' ${MCP_URL}    # 405`);
+  log.info(`curl -s -o ${WIN ? 'NUL' : '/dev/null'} -w "%{http_code}\\n" ${MCP_URL}    # 405`);
   log.info(`${tilde(BIN)} status`);
   if (env.AI_MEMORY_LLM_PROVIDER) log.info(`${tilde(BIN)} llm-test --provider ${env.AI_MEMORY_LLM_PROVIDER} --model ${env.AI_MEMORY_LLM_MODEL} --prompt ok`);
   return 0;

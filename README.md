@@ -17,6 +17,8 @@ cd ~/projetos/glossary
 ./install.sh
 ```
 
+No Windows (PowerShell, sem administrador): `git clone https://github.com/randsondev/glossary.git $HOME\projetos\glossary`, `cd $HOME\projetos\glossary` e `.\install.cmd`.
+
 O instalador confere os pré-requisitos (git e Node 20+), faz as poucas perguntas no começo, roda tudo na ordem certa e termina com uma conferência. O passo a passo, com o que responder em cada pergunta, está em [docs/PASSO-A-PASSO.md](docs/PASSO-A-PASSO.md). Para conferir depois: `node glossary.mjs --check`. Para atualizar: `git pull && ./install.sh --yes`.
 
 ## Onde cada agente lê
@@ -40,7 +42,7 @@ vendor/<fonte>/<nome>/          cópia fiel das fontes + LICENSE + NOTICE.md
 sources.json                    fontes de skills e versões fixadas do ai-memory e do Serena
 sources.lock.json               commit de cada fonte e sha256 de cada skill e de cada binário
 link.json                       pastas de destino por agente e exclusões
-install.sh                      instalação guiada (chama scripts/install.mjs)
+install.sh, install.cmd         instalação guiada (chama scripts/install.mjs); install.cmd é a do Windows
 glossary.mjs                    roda tudo em sequência (idempotente, --dry-run, --check)
 scripts/check.mjs               confere a instalação inteira, sem alterar nada (--deep: chamada MCP real)
 scripts/e2e.mjs                 instala tudo numa pasta pessoal temporária e confere (CI; --from main testa a atualização)
@@ -62,7 +64,7 @@ templates/skill/SKILL.md        modelo para skill nova
 
 ## Testes
 
-- `node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs'`: testes de unidade.
+- `node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs' 'serena/*.test.mjs'`: testes de unidade.
 - `node scripts/e2e.mjs`: instala tudo numa pasta pessoal temporária, com outra porta e o ai-memory como processo, sem tocar na instalação desta máquina; `--from main` instala a main antes e atualiza em cima dela.
 - `node glossary.mjs --check --deep`: na instalação real, faz uma chamada MCP e pergunta ao Claude Code se os servidores conectam. O `./install.sh` termina com ela.
 - Toda correção (`fix:`) vem com o teste que reproduz o defeito, num `*.test.mjs` ou num passo do `scripts/e2e.mjs`.

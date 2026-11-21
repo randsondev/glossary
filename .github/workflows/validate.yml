@@ -22,7 +22,7 @@ jobs:
       - name: validate
         run: node scripts/validate.mjs --skills-ref --no-extra
       - name: testes de unidade
-        run: node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs'
+        run: node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs' 'serena/*.test.mjs'
       - name: guard
         env:
           GUARD_DENY: ${{ secrets.GUARD_DENY }}
@@ -34,6 +34,22 @@ jobs:
           else
             node scripts/guard.mjs --all --require-deny
           fi
+
+  # Windows: testes de unidade (links, .cmd, hooks na forma exec), conteúdo do vendor/ com LF e dry-run.
+  # O e2e não roda aqui: no Windows não dá para isolar a pasta pessoal (ver scripts/e2e.mjs).
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: validate
+        run: node scripts/validate.mjs --no-extra
+      - name: testes de unidade
+        run: node --test 'scripts/*.test.mjs' 'ai-memory/*.test.mjs' 'serena/*.test.mjs'
+      - name: dry-run
+        run: node glossary.mjs --dry-run --yes --agents claude,cursor,codex
 
   # Instala tudo numa pasta pessoal temporária (porta própria, servidor como processo) e confere:
   # conferência --deep, hook gravando na memória e segunda instalação sem mudar arquivo.
