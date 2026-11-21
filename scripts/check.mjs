@@ -34,6 +34,7 @@ import {
   CODEX_HOME,
   CONFIG_DIR,
   HOME,
+  INSTALL,
   REPO,
   expandHome,
   extraRoots,
@@ -86,9 +87,9 @@ export async function check({ agents, deep = false } = {}) {
   }
   const roots = extraRoots();
   for (const r of roots)
-    fs.existsSync(r.dir) ? ok(`privadas: ${tilde(r.dir)} (${listSkills(r.dir, { nested: true }).length} skill(s))`) : bad(`privadas: ${tilde(r.dir)} não existe (rode ./install.sh)`);
-  if (!roots.length) warn('sem repositório privado (rode ./install.sh)');
-  if (!fs.existsSync(DENY_FILE)) warn(`sem a lista de nomes da empresa (${tilde(DENY_FILE)}): a trava de commit só pega os padrões genéricos (rode ./install.sh)`);
+    fs.existsSync(r.dir) ? ok(`privadas: ${tilde(r.dir)} (${listSkills(r.dir, { nested: true }).length} skill(s))`) : bad(`privadas: ${tilde(r.dir)} não existe (rode ${INSTALL})`);
+  if (!roots.length) warn(`sem repositório privado (rode ${INSTALL})`);
+  if (!fs.existsSync(DENY_FILE)) warn(`sem a lista de nomes da empresa (${tilde(DENY_FILE)}): a trava de commit só pega os padrões genéricos (rode ${INSTALL})`);
   if (agents.includes('hermes')) {
     const profiles = hermesProfiles();
     if (!profiles.length) warn('hermes: não está no PATH');
@@ -130,9 +131,9 @@ export async function check({ agents, deep = false } = {}) {
   else bad(`binário ${current || 'ausente'} em ${tilde(BIN)} (esperado ${version})`);
   const status = await mcpStatus();
   // Registro antigo pela URL: com token recebe 401; sem token ainda funciona, e o ./install.sh troca pela ponte.
-  const otherUrl = (label) => bad(`${label}: ai-memory registrado com outro endereço; o atual é ${MCP_URL} (rode ./install.sh)`);
+  const otherUrl = (label) => bad(`${label}: ai-memory registrado com outro endereço; o atual é ${MCP_URL} (rode ${INSTALL})`);
   const viaUrl = (label) =>
-    (mcpToken() ? bad : warn)(`${label}: MCP do ai-memory pela URL, sem a ponte mcp-bridge (${mcpToken() ? 'com token, recebe 401' : 'funciona sem token'}; rode ./install.sh)`);
+    (mcpToken() ? bad : warn)(`${label}: MCP do ai-memory pela URL, sem a ponte mcp-bridge (${mcpToken() ? 'com token, recebe 401' : 'funciona sem token'}; rode ${INSTALL})`);
   if (status === 405) ok(`servidor no ar (${MCP_URL})`);
   else if (status === 401) bad(`servidor no ar, mas recusou o token do bearer_token_file (${MCP_URL} respondeu 401)`);
   else bad(`servidor fora do ar (${MCP_URL} respondeu ${status || 'nada'})`);
@@ -142,7 +143,7 @@ export async function check({ agents, deep = false } = {}) {
         warn('codex: tem a memória ligada, mas a instalação escolheu deixá-lo de fora');
       continue;
     }
-    if (!wired(agent, AGENT_FILES[agent])) bad(`${agent}: MCP ou hooks do ai-memory faltando ou fora de ${MCP_URL} (rode ./install.sh)`);
+    if (!wired(agent, AGENT_FILES[agent])) bad(`${agent}: MCP ou hooks do ai-memory faltando ou fora de ${MCP_URL} (rode ${INSTALL})`);
     else if (agent === 'codex' && !codexBridged()) viaUrl('codex');
     else if (agent === 'codex' && !codexHooksTrusted()) warn('codex: MCP e hooks ligados; abra o Codex e escolha "Trust all and continue" nos hooks');
     else ok(`${agent}: MCP e hooks ligados`);
@@ -153,11 +154,11 @@ export async function check({ agents, deep = false } = {}) {
     for (const h of profiles) {
       const entry = hermesMcpEntry(h);
       const hooks = hermesHooksWired(h);
-      if (!entry) bad(`${h.label}: MCP do ai-memory não registrado (rode ./install.sh)`);
+      if (!entry) bad(`${h.label}: MCP do ai-memory não registrado (rode ${INSTALL})`);
       else if (entry.command !== BIN) viaUrl(h.label);
       else if (entry.args?.join(' ') !== BRIDGE_ARGS.join(' ')) otherUrl(h.label);
       else if (entry.enabled === false) warn(`${h.label}: MCP do ai-memory registrado mas desligado (hermes ${h.args.join(' ')} mcp test ai-memory)`);
-      else if (!hooks) warn(`${h.label}: MCP ligado, mas sem os hooks que gravam as sessões (rode ./install.sh)`);
+      else if (!hooks) warn(`${h.label}: MCP ligado, mas sem os hooks que gravam as sessões (rode ${INSTALL})`);
       else if (!hasText(hermesAllowlist(h), 'ai-memory')) warn(`${h.label}: MCP e hooks ligados; abra o Hermes nesse perfil e aceite os hooks do ai-memory`);
       else ok(`${h.label}: MCP e hooks ligados`);
     }
@@ -172,7 +173,7 @@ export async function check({ agents, deep = false } = {}) {
       if (!registered) bad('openclaude: MCP do ai-memory não registrado');
       else if (!got.stdout.includes('mcp-bridge')) viaUrl('openclaude');
       else if (!got.stdout.includes(MCP_URL) || (hooks && !hooksHere)) otherUrl('openclaude');
-      else if (!hooks) bad('openclaude: MCP ligado, mas sem os hooks que gravam as sessões (rode ./install.sh)');
+      else if (!hooks) bad(`openclaude: MCP ligado, mas sem os hooks que gravam as sessões (rode ${INSTALL})`);
       else ok('openclaude: MCP e hooks ligados');
     }
     else if (!choices.memoryAgents) ok(registered ? 'openclaude: MCP ligado' : 'openclaude: sem memória compartilhada');
@@ -182,7 +183,7 @@ export async function check({ agents, deep = false } = {}) {
   if (memoryAgents.includes('openclaw')) {
     const entry = openclawConfig().mcp?.servers?.['ai-memory'];
     if (!which('openclaw')) warn('openclaw: não está no PATH; a memória não foi ligada nele (instale o OpenClaw ou apague ~/.openclaw)');
-    else if (!entry || entry.enabled === false) bad('openclaw: MCP do ai-memory ausente ou desligado (rode ./install.sh)');
+    else if (!entry || entry.enabled === false) bad(`openclaw: MCP do ai-memory ausente ou desligado (rode ${INSTALL})`);
     else {
       if (entry.command === BIN && entry.args?.join(' ') === BRIDGE_ARGS.join(' ')) ok('openclaw: MCP do ai-memory registrado');
       else if (entry.command === BIN && entry.args?.includes('mcp-bridge')) otherUrl('openclaw');
@@ -209,7 +210,16 @@ export async function check({ agents, deep = false } = {}) {
       if (v === sources.serena.version) ok(`Serena ${v}`);
       else warn(`Serena ${v}, versão fixada ${sources.serena.version}`);
       const lines = fs.existsSync(SERENA_CONFIG) ? fs.readFileSync(SERENA_CONFIG, 'utf8').split('\n') : [];
-      const central = lines.some((l) => l.startsWith('project_serena_folder_location:') && l.includes(path.join(HOME, '.serena', 'projects')));
+      // O valor pode vir entre aspas duplas, com as barras invertidas do Windows escapadas (C:\\Users\\...).
+      const yamlValue = (l) => {
+        const v = l.slice(l.indexOf(':') + 1).trim();
+        try {
+          return v.startsWith('"') ? JSON.parse(v) : v.replace(/^'|'$/g, '');
+        } catch {
+          return v;
+        }
+      };
+      const central = lines.some((l) => l.startsWith('project_serena_folder_location:') && yamlValue(l).includes(path.join(HOME, '.serena', 'projects')));
       const quiet = lines.some((l) => /^web_dashboard_open_on_launch:\s*false/i.test(l));
       if (central && quiet) ok(`config ajustada (${readList(lines, 'base_modes').join(', ')})`);
       else bad('config do Serena sem os ajustes (rode: node glossary.mjs --only serena)');
@@ -249,7 +259,7 @@ export async function check({ agents, deep = false } = {}) {
   }
 
   log.step('Resultado');
-  if (errors) log.err(`${errors} problema(s) e ${warnings} aviso(s). Corrija os itens acima ou rode ./install.sh de novo.`);
+  if (errors) log.err(`${errors} problema(s) e ${warnings} aviso(s). Corrija os itens acima ou rode ${INSTALL} de novo.`);
   else log.ok(`tudo certo${warnings ? ` (${warnings} aviso(s))` : ''}`);
   return errors ? 1 : 0;
 }

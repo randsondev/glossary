@@ -9,6 +9,12 @@ import { fileURLToPath } from 'node:url';
 
 export const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const HOME = os.homedir();
+export const WIN = process.platform === 'win32';
+// Rodando a partir do PowerShell 7, o PSModulePath dele chega ao powershell.exe (5.1), que então não carrega
+// os próprios módulos (instalador do uv, entrada de logon). Sem a variável, cada PowerShell monta a sua.
+if (WIN) delete process.env.PSModulePath;
+// Comando de instalação mostrado nas mensagens.
+export const INSTALL = WIN ? 'install.cmd' : './install.sh';
 export const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(HOME, '.config'), 'glossary');
 
 // Verdadeiro quando o módulo foi chamado direto ("node arquivo.mjs"), não importado.
@@ -47,9 +53,46 @@ export function die(msg, code = 1) {
 
 export function expandHome(p) {
   if (p === '~') return HOME;
-  if (p.startsWith('~/')) return path.join(HOME, p.slice(2));
+  if (p.startsWith('~/') || (WIN && p.startsWith('~\\'))) return path.join(HOME, p.slice(2));
   return p;
 }
+
+// Link para uma pasta. No Windows, junction: não exige modo de desenvolvedor nem administrador,
+// e o Node a trata como symlink (lstat, readlink e unlink funcionam igual).
+export function linkDir(target, dest) {
+  fs.symlinkSync(target, dest, WIN ? 'junction' : 'dir');
+}
+
+// Link para um arquivo. No Windows sem modo de desenvolvedor o symlink de arquivo é negado (EPERM):
+// fica um hard link, que acompanha o original enquanto ele for regravado no lugar (writeFileSync).
+export function linkFile(target, dest) {
+  try {
+    fs.symlinkSync(target, dest, 'file');
+  } catch (e) {
+    if (!WIN || e.code !== 'EPERM') throw e;
+    fs.linkSync(target, dest);
+  }
+}
+
+// true se dest é um link (symlink ou, no Windows, hard link) para target.
+export function linksTo(dest, target) {
+  try {
+    const st = fs.lstatSync(dest);
+    if (st.isSymbolicLink()) return path.resolve(path.dirname(dest), fs.readlinkSync(dest)) === target;
+    if (!WIN || !st.isFile()) return false;
+    const a = fs.statSync(dest, { bigint: true });
+    const b = fs.statSync(target, { bigint: true });
+    return a.ino === b.ino && a.dev === b.dev;
+  } catch {
+    return false;
+  }
+}
+
+// Pacote da release do ai-memory por plataforma (ex.: linux-x86_64); o do Windows é zip.
+export const aiMemoryAsset = (platform) => `ai-memory-${platform}${platform.startsWith('windows-') ? '.zip' : '.tar.gz'}`;
+
+// O tar do Windows (bsdtar, em System32) lê zip e entende C:\; o do Git Bash, se vier antes no PATH, não.
+export const TAR = WIN ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
 
 // Mostra um caminho com ~ no lugar da home (para logs e relatórios).
 export function tilde(p) {
@@ -128,8 +171,22 @@ export function copyDir(src, dest) {
 
 // ---------- processos ----------
 
+// No Windows o Node não roda .cmd/.bat sem shell (EINVAL), e os CLIs instalados pelo npm são .cmd.
+// Passa pelo cmd.exe com cada argumento escapado, como o cross-spawn faz.
+const cmdMeta = /([()\][%!^"`<>&|;, *?])/g;
+function cmdArg(arg) {
+  let a = String(arg).replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1');
+  return `"${a}"`.replace(cmdMeta, '^$1');
+}
+export function spawnArgs(cmd, args, opts = {}) {
+  if (!WIN || !/\.(cmd|bat)$/i.test(cmd)) return [cmd, args, opts];
+  const line = [cmd.replace(cmdMeta, '^$1'), ...args.map(cmdArg)].join(' ');
+  return [process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `"${line}"`], { ...opts, windowsVerbatimArguments: true }];
+}
+const spawnCmd = (cmd, args, opts) => spawnSync(...spawnArgs(cmd, args, opts));
+
 export function run(cmd, args = [], opts = {}) {
-  const r = spawnSync(cmd, args, { encoding: 'utf8', ...opts });
+  const r = spawnCmd(cmd, args, { encoding: 'utf8', ...opts });
   if (r.error && r.error.code !== 'ENOENT') throw r.error;
   return { code: r.error ? 127 : r.status, stdout: r.stdout || '', stderr: r.stderr || '' };
 }
@@ -142,7 +199,7 @@ export function runLive(cmd, args, { dryRun = false, cwd, env } = {}) {
     return 0;
   }
   log.info(`$ ${shown}`);
-  const r = spawnSync(cmd, args, { stdio: 'inherit', cwd, env: env ? { ...process.env, ...env } : process.env });
+  const r = spawnCmd(cmd, args, { stdio: 'inherit', cwd, env: env ? { ...process.env, ...env } : process.env });
   if (r.error) {
     log.err(`${cmd}: ${r.error.message}`);
     return 127;
@@ -174,7 +231,7 @@ export function runWithAnswers(cmd, args, answers, { dryRun = false } = {}) {
   }
   log.info(`$ ${shown}`);
   // A saída fica guardada: quem chama confere o resultado (ex.: checkHermes) e mostra o que importa.
-  const r = spawnSync(cmd, args, { input: answers, encoding: 'utf8' });
+  const r = spawnCmd(cmd, args, { input: answers, encoding: 'utf8' });
   if (r.error) {
     log.err(`${cmd}: ${r.error.message}`);
     return 127;
@@ -213,9 +270,18 @@ const versioned = (p) => /[/\\](mise|asdf|\.nvm|nvm|fnm|volta)[/\\](.*[/\\])?(in
 const quote = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'"'"'`)}'`);
 export function nodeCommand(script) {
   const node = versioned(process.execPath)
-    ? (process.env.PATH || '').split(path.delimiter).map((d) => path.join(d, 'node')).find((p) => !versioned(p) && fs.existsSync(p))
+    ? (process.env.PATH || '').split(path.delimiter).map((d) => path.join(d, WIN ? 'node.exe' : 'node')).find((p) => !versioned(p) && fs.existsSync(p))
     : null;
-  return [node || process.execPath, script].map(quote).join(' ');
+  if (!WIN) return [node || process.execPath, script].map(quote).join(' ');
+  // Windows: o mesmo texto tem de servir ao cmd, ao PowerShell e ao shlex do Hermes. Barra normal
+  // (o shlex come a invertida) e aspas duplas só se houver espaço; um caminho entre aspas no começo
+  // o PowerShell lê como texto e não roda, então o node com espaço no caminho (C:\Program Files)
+  // vai pelo nome, que está no PATH.
+  const slash = (p) => p.replaceAll('\\', '/');
+  const exe = slash(node || process.execPath);
+  const head = !/\s/.test(exe) ? exe : which('node') ? 'node' : `"${exe}"`;
+  const s = slash(script);
+  return `${head} ${/\s/.test(s) ? `"${s}"` : s}`;
 }
 
 // Hooks de um evento num perfil do Hermes (pre_tool_call, post_tool_call...), lidos e gravados pelo
@@ -248,14 +314,22 @@ export function checkHermes(h, name) {
   else log.ok(`${h.label}: ${name} registrado`);
 }
 
+// No Windows, o nome sem extensão vira cmd.exe, cmd.cmd... (PATHEXT). O arquivo sem extensão que o
+// npm põe ao lado do .cmd é script de sh e não roda daqui; o .ps1 também não, então nenhum dos dois conta.
+const EXTS = WIN
+  ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter((e) => e && e.toUpperCase() !== '.PS1')
+  : [''];
 export function which(cmd) {
+  const names = WIN && path.extname(cmd) ? [cmd] : EXTS.map((e) => cmd + e.toLowerCase());
   for (const dir of (process.env.PATH || '').split(path.delimiter)) {
     if (!dir) continue;
-    const p = path.join(dir, cmd);
-    try {
-      fs.accessSync(p, fs.constants.X_OK);
-      if (fs.statSync(p).isFile()) return p;
-    } catch {}
+    for (const name of names) {
+      const p = path.join(dir.replace(/^"|"$/g, ''), name);
+      try {
+        fs.accessSync(p, WIN ? fs.constants.F_OK : fs.constants.X_OK);
+        if (fs.statSync(p).isFile()) return p;
+      } catch {}
+    }
   }
   return null;
 }
@@ -270,7 +344,7 @@ export function findClaudeBinary() {
     if (!fs.existsSync(root)) continue;
     for (const name of fs.readdirSync(root)) {
       if (!name.startsWith('anthropic.claude-code-')) continue;
-      const bin = path.join(root, name, 'resources', 'native-binary', 'claude');
+      const bin = path.join(root, name, 'resources', 'native-binary', WIN ? 'claude.exe' : 'claude');
       if (fs.existsSync(bin)) found.push({ bin, version: name.slice('anthropic.claude-code-'.length) });
     }
   }

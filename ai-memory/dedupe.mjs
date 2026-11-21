@@ -13,7 +13,7 @@
 // Feche as sessões do Claude Code e do Cursor nessas pastas antes de rodar com --apply.
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { HOME, confirm, die, exists, isMain, localProjects, log, run, setAssumeYes, tilde } from '../scripts/lib.mjs';
+import { HOME, INSTALL, confirm, die, exists, isMain, localProjects, log, run, setAssumeYes, tilde } from '../scripts/lib.mjs';
 import { BIN } from './setup.mjs';
 
 const observations = () => /observations:\s+(\d+)/.exec(run(BIN, ['status']).stdout)?.[1] ?? '?';
@@ -42,7 +42,7 @@ function backfill(cwd, args) {
 const lastLine = (r) => (r.stderr || r.stdout).trim().split('\n').pop();
 
 export async function dedupe({ apply = false } = {}) {
-  if (!exists(BIN)) die('ai-memory não instalado (rode ./install.sh)');
+  if (!exists(BIN)) die(`ai-memory não instalado (rode ${INSTALL})`);
   const projects = localProjects().filter((p) => p.aiMemory && exists(p.dir));
   if (!projects.length) {
     log.info('nenhum projeto da empresa no projects.json');

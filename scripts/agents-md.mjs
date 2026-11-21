@@ -19,8 +19,11 @@ import {
   REPO,
   backupFile,
   extraRoots,
+  WIN,
   hermesProfiles,
   isMain,
+  linkFile,
+  linksTo,
   log,
   nodeCommand,
   readJSON,
@@ -68,16 +71,20 @@ export function buildAgentsMd() {
     .filter((f) => fs.existsSync(f))
     .map((f) => fs.readFileSync(f, 'utf8').trim());
   return [
-    `<!-- Gerado por ${tilde(path.join(REPO, 'scripts', 'link.mjs'))}: edite agents/AGENTS.md no glossary, não este arquivo. -->`,
+    `${GENERATED}${tilde(path.join(REPO, 'scripts', 'link.mjs'))}: edite agents/AGENTS.md no glossary, não este arquivo. -->`,
     '# Regras gerais dos agentes',
     own.trim(),
     ...(priv.length ? [`## Regras do repositório interno\n\n${priv.map((t) => demote(t, 1)).join('\n\n')}`] : []),
   ].join('\n\n') + '\n';
 }
 
-const isOurLink = (p) => {
+const isOurLink = (p) => linksTo(p, AGENTS_MD);
+// Hard link (Windows sem symlink) que se soltou do original, por exemplo porque o AGENTS.md foi
+// apagado e recriado: o texto ainda é o gerado por nós, então pode ser trocado por um link novo.
+const GENERATED = '<!-- Gerado por ';
+const isStaleCopy = (p) => {
   try {
-    return fs.lstatSync(p).isSymbolicLink() && path.resolve(path.dirname(p), fs.readlinkSync(p)) === AGENTS_MD;
+    return WIN && fs.lstatSync(p).isFile() && fs.readFileSync(p, 'utf8').startsWith(GENERATED);
   } catch {
     return false;
   }
@@ -99,12 +106,18 @@ export function wireAgentsMd({ agents, dryRun = false, unlink = false }) {
 
   for (const [agent, file] of Object.entries(LINKS)) {
     if (!agents.includes(agent)) continue;
+    const stale = isStaleCopy(file) && !isOurLink(file);
     if (unlink) {
-      if (isOurLink(file)) act(`${agent}: ${tilde(file)} removido`, () => fs.unlinkSync(file));
+      if (isOurLink(file) || stale) act(`${agent}: ${tilde(file)} removido`, () => fs.unlinkSync(file));
     } else if (isOurLink(file)) log.ok(`${agent}: ${tilde(file)} já aponta para as regras gerais`);
-    else if (fs.lstatSync(file, { throwIfNoEntry: false }))
+    else if (fs.lstatSync(file, { throwIfNoEntry: false }) && !stale)
       log.warn(`${agent}: ${tilde(file)} já existe e não é do glossary; não mexo (junte o conteúdo em agents/AGENTS.md e apague-o)`);
-    else act(`${agent}: ${tilde(file)} -> ${tilde(AGENTS_MD)}`, () => (fs.mkdirSync(path.dirname(file), { recursive: true }), fs.symlinkSync(AGENTS_MD, file)));
+    else
+      act(`${agent}: ${tilde(file)} -> ${tilde(AGENTS_MD)}`, () => {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        if (stale) fs.unlinkSync(file);
+        linkFile(AGENTS_MD, file);
+      });
   }
 
   const workspaces = agents.includes('openclaw') ? openclawWorkspaces().map((home) => ({ home, label: 'openclaw', file: 'AGENTS.md' })) : [];

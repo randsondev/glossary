@@ -31,12 +31,13 @@
   ],
   "aiMemory": {
     "repo": "https://github.com/akitaonrails/ai-memory",
-    "version": "v3.4.7",
+    "version": "v3.5.1",
     "platforms": [
       "macos-aarch64",
       "macos-x86_64",
       "linux-x86_64",
-      "linux-aarch64"
+      "linux-aarch64",
+      "windows-x86_64"
     ]
   },
   "serena": {

@@ -10,6 +10,9 @@ test('MCP e ponte usam a porta configurada, mantendo o padrão sem config', asyn
   // No Linux, XDG_DATA_HOME passaria na frente do home e tiraria os dados da pasta temporária.
   const xdg = process.env.XDG_DATA_HOME;
   delete process.env.XDG_DATA_HOME;
+  // No Windows os dados ficam em %LOCALAPPDATA%, que não depende do home.
+  const localAppData = process.env.LOCALAPPDATA;
+  process.env.LOCALAPPDATA = path.join(dir, 'AppData', 'Local');
   os.homedir = () => dir;
   try {
     const first = await import('./setup.mjs?default');
@@ -48,6 +51,12 @@ test('MCP e ponte usam a porta configurada, mantendo o padrão sem config', asyn
       // Instalação com token: o ai-memory grava a ponte stdio, sem o campo url.
       fs.writeFileSync(mcp, JSON.stringify({ mcpServers: { 'ai-memory': { type: 'stdio', command: 'ai-memory', args: ['mcp-bridge', '--server-url', `${url}/mcp`] } } }));
       assert.equal(setup.wired('cursor', [mcp, hooks]), expected, `cursor (ponte stdio) na porta ${port}`);
+      // Windows: o hook do Claude Code na forma exec, com o endereço no args.
+      fs.writeFileSync(hooks, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'C:\\ai-memory.exe', args: ['hook', '--event', 'stop', '--server-url', url] }] }] } }, null, 2));
+      assert.equal(setup.wired('claude', [mcp, hooks]), expected, `claude (forma exec do Windows) na porta ${port}`);
+      // Windows: o hook do Cursor numa linha só, com o caminho e o endereço entre aspas.
+      fs.writeFileSync(hooks, JSON.stringify({ hooks: { stop: [{ type: 'command', command: `"C:\\ai-memory.exe" --data-dir "C:\\dados" hook --event stop --agent cursor --server-url "${url}"` }] } }));
+      assert.equal(setup.wired('cursor', [mcp, hooks]), expected, `cursor (endereço entre aspas no Windows) na porta ${port}`);
     }
 
     // Hook do ai-memory que ficou na porta antiga sai; o da porta atual e os de outras ferramentas ficam.
@@ -58,9 +67,16 @@ test('MCP e ponte usam a porta configurada, mantendo o padrão sem config', asyn
     } }));
     setup.dropStaleHooks(hooks);
     assert.deepEqual(JSON.parse(fs.readFileSync(hooks, 'utf8')).hooks, { Stop: [{ hooks: [cmd(49375), { type: 'command', command: 'outro-hook' }] }] });
+    // O mesmo com a forma exec do Windows.
+    const exec = (port) => ({ type: 'command', command: 'C:\\ai-memory.exe', args: ['hook', '--server-url', `http://127.0.0.1:${port}`] });
+    fs.writeFileSync(hooks, JSON.stringify({ hooks: { Stop: [{ hooks: [exec(49374), exec(49375)] }] } }));
+    setup.dropStaleHooks(hooks);
+    assert.deepEqual(JSON.parse(fs.readFileSync(hooks, 'utf8')).hooks, { Stop: [{ hooks: [exec(49375)] }] });
   } finally {
     os.homedir = homedir;
     if (xdg !== undefined) process.env.XDG_DATA_HOME = xdg;
+    if (localAppData === undefined) delete process.env.LOCALAPPDATA;
+    else process.env.LOCALAPPDATA = localAppData;
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

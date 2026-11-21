@@ -1,6 +1,6 @@
 # Passo a passo
 
-O setup de IA do time na sua máquina, com um comando. Funciona com **Claude Code, Cursor, Hermes, OpenClaude e Codex**, no macOS (e no Linux).
+O setup de IA do time na sua máquina, com um comando. Funciona com **Claude Code, Cursor, Hermes, OpenClaude e Codex**, no macOS, no Linux e no Windows.
 
 Você ganha três coisas:
 
@@ -10,7 +10,7 @@ Você ganha três coisas:
 
 ## Antes de começar
 
-- `git` e Node.js 20 ou mais novo. No macOS: `xcode-select --install` e `brew install node`.
+- `git` e Node.js 20 ou mais novo. No macOS: `xcode-select --install` e `brew install node`. No Windows: `winget install Git.Git OpenJS.NodeJS.LTS`.
 - Pelo menos um dos cinco agentes instalado.
 - Para o Serena: o `uv`. Se faltar, o instalador instala junto com o Serena.
 
@@ -21,6 +21,16 @@ git clone https://github.com/randsondev/glossary.git ~/projetos/glossary
 cd ~/projetos/glossary
 ./install.sh
 ```
+
+No Windows, no PowerShell (sem administrador):
+
+```powershell
+git clone https://github.com/randsondev/glossary.git $HOME\projetos\glossary
+cd $HOME\projetos\glossary
+.\install.cmd
+```
+
+Nos comandos abaixo, troque `./install.sh` por `.\install.cmd`. No Windows o ai-memory fica em `%LOCALAPPDATA%\Programs\ai-memory`, os dados em `%LOCALAPPDATA%\ai-memory`, e o servidor sobe a cada login por uma entrada em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. As skills entram por junction, que não pede modo de desenvolvedor.
 
 As perguntas vêm todas no começo. Depois disso a instalação roda sozinha, em poucos minutos.
 
