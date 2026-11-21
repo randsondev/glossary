@@ -160,7 +160,7 @@ async function hookCaptures() {
 
 // Arquivos da pasta pessoal com o hash de cada um, fora o que muda sozinho (dados, logs, caches).
 function snapshot(dir) {
-  const skip = [data, path.join(home, 'Library', 'Logs'), path.join(home, 'Library', 'Caches'), path.join(home, '.cache'), path.join(home, '.local', 'share', 'uv'), path.join(home, '.serena', 'logs')];
+  const skip = [data, path.join(home, 'Library', 'Logs'), path.join(home, 'Library', 'Caches'), path.join(home, '.cache'), path.join(home, '.local', 'share', 'uv'), path.join(home, '.serena', 'logs'), path.join(home, '.npm', '_logs')];
   const out = new Map();
   const walk = (d) => {
     if (skip.includes(d)) return;
