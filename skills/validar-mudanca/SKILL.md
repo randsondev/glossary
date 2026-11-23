@@ -1,6 +1,6 @@
 ---
 name: validar-mudanca
-description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
+description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo e de novo a cada nova rodada de correção na mesma sessão. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
 ---
 # validar-mudanca
 
@@ -8,11 +8,12 @@ Quando o usuário diz **testar**, ele quer ver a mudança funcionando como caso 
 
 Esta skill trabalha junto com a `ponytail`: o ponytail decide o tamanho da mudança; esta skill prova que ela funciona e que nada quebrou.
 
-Três regras valem em toda execução:
+Quatro regras valem em toda execução:
 
 - **Regressão primeiro**: nenhuma correção antes de rodar os testes que já existem, na base e na mudança.
 - **De baixo para cima**: uma camada só sobe quando passou, e passar é não ter falha nova em relação à base. O que já falhava na base vai para o relatório e não bloqueia.
 - **Sistema real só com confirmação**: caso que grava em produção, manda mensagem a cliente ou aciona sistema externo real roda só depois de o usuário confirmar aquele caso.
+- **Validado só com roteiro**: só diga que está validado quando o roteiro tiver os casos de cada correção feita, com evidência. Uma correção nova, ajuste de revisão ou outro PR entra no mesmo roteiro antes de afirmar.
 
 ## Camadas
 
