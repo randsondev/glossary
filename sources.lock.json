@@ -3,8 +3,8 @@
     "ponytail": {
       "repo": "https://github.com/dietrichgebert/ponytail.git",
       "ref": "main",
-      "commit": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846",
-      "committed": "2026-10-29",
+      "commit": "ebd8654c2c627f721eb8f9c0d1bd4090a29f9e10",
+      "committed": "2026-11-22",
       "skills": {
         "ponytail": {
           "path": "skills/ponytail",
@@ -41,8 +41,8 @@
     "mattpocock": {
       "repo": "https://github.com/mattpocock/skills.git",
       "ref": "main",
-      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
-      "committed": "2026-11-12",
+      "commit": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "committed": "2026-11-19",
       "skills": {
         "ask-matt": {
           "path": "skills/engineering/ask-matt",
@@ -157,8 +157,8 @@
     "awesome-copilot": {
       "repo": "https://github.com/github/awesome-copilot.git",
       "ref": "main",
-      "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
-      "committed": "2026-11-16",
+      "commit": "f10fdb8b2660ce85c98f220b2f1ca24653768a5c",
+      "committed": "2026-11-20",
       "skills": {
         "salesforce-apex-quality": {
           "path": "skills/salesforce-apex-quality",
@@ -176,13 +176,13 @@
     }
   },
   "aiMemory": {
-    "version": "v3.5.1",
+    "version": "v3.5.2",
     "assets": {
-      "macos-aarch64": "fda158379dc03331e5c71ab6b702a9335c7fc41e75dda4a2b1a7d1e8e98aaf04",
-      "macos-x86_64": "49ff09af2eb904abf077a4a2a87660cad7800c6d6f4843abcab487f9315577c9",
-      "linux-x86_64": "0e82461025db99cc8794b07708b43953ea111ffa7f26592ff896bbf64eb412bb",
-      "linux-aarch64": "120514a9279ee1d8036153da430feef25091477081030337c63bbee1c93be7eb",
-      "windows-x86_64": "867da04c121910b019d4525c7afcdbd300eefebf310b3f5112bd19a043c211ef"
+      "macos-aarch64": "119d20edaf2b34234d49b0063a61af004973acd8fb58ea335da82c9d9f96825f",
+      "macos-x86_64": "da2f9ba1527ca6886a33e88ab7e9aae85b12c96681ceb885de673606f44ce1e0",
+      "linux-x86_64": "1aaf45b8bb651e0f24c066933c0e355cf65e6720b9f013a802b0ca0733cd538b",
+      "linux-aarch64": "e1131e11e4615e99b525172ecad0dbfe8ab094913a1b66c495cdff69c1f937a4",
+      "windows-x86_64": "396e2c6cf74f0b011481b1b7ecb4174897d31faa3f4a06608c30a64de407e365"
     }
   },
   "serena": {

@@ -31,7 +31,7 @@
   ],
   "aiMemory": {
     "repo": "https://github.com/akitaonrails/ai-memory",
-    "version": "v3.5.1",
+    "version": "v3.5.2",
     "platforms": [
       "macos-aarch64",
       "macos-x86_64",
