@@ -1,6 +1,6 @@
 ---
 name: validar-mudanca
-description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo e de novo a cada nova rodada de correção na mesma sessão. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
+description: "Testa uma mudança ou a correção de um bug funcionando de verdade: roda a regressão antes da primeira edição, testa por camadas (unidade, serviço, integração, ponta a ponta) e registra cada caso com evidência num roteiro com checklist. Use quando o usuário pedir para testar, validar ou conferir uma mudança ou PR, montar roteiro de testes, investigar por que algo está falhando, ou corrigir um bug ou defeito, carregando antes de editar qualquer arquivo e de novo a cada nova rodada de correção na mesma sessão. Pedido de testar não é pedido de escrever teste: classe de teste Apex é a skill apex-testes-otimizados, só com pedido explícito."
 ---
 # validar-mudanca
 
@@ -31,15 +31,29 @@ Camada com falha nova deixa os casos acima dela **bloqueados**, com o motivo. Fa
 ## Dois caminhos
 
 - **Validar uma mudança** (testar, conferir, validar o PR): passos 1 a 7.
+- **Investigar uma falha** (por que está dando erro, sem pedido de correção): [Investigar o defeito](#investigar-o-defeito), e relate a causa com a evidência e a correção que você proporia.
 - **Corrigir um defeito**:
-  1. Passo 1, e o passo 2 na base.
-  2. Reproduza o defeito como caso que falha, na camada mais baixa que o mostra.
-  3. Escolha um caso vizinho que não deve mudar: mesmo código, outra entrada.
-  4. Corrija com a menor mudança que resolve a causa, como manda o ponytail.
-  5. Rode de novo o defeito (agora passa), o vizinho (igual a antes) e a regressão (sem falha nova).
-  6. Projeto com suíte de teste, fora do Salesforce: o defeito reproduzido vira um teste pequeno nessa suíte, o teste que o ponytail pede para lógica nova. Em Salesforce, a reprodução fica como Apex anônimo no roteiro; classe de teste só com pedido.
+  1. [Investigar o defeito](#investigar-o-defeito).
+  2. Passo 1, e o passo 2 na base.
+  3. Reproduza o defeito como caso que falha, na camada mais baixa que o mostra.
+  4. Escolha um caso vizinho que não deve mudar: mesmo código, outra entrada, de preferência tirado do alcance medido na investigação.
+  5. Corrija com a menor mudança que resolve a causa, como manda o ponytail.
+  6. Rode de novo o defeito (agora passa), o vizinho (igual a antes) e a regressão (sem falha nova).
+  7. Projeto com suíte de teste, fora do Salesforce: o defeito reproduzido vira um teste pequeno nessa suíte, o teste que o ponytail pede para lógica nova. Em Salesforce, a reprodução fica como Apex anônimo no roteiro; classe de teste só com pedido.
 
   A página do passo 4 só entra se o usuário pedir ou se outra pessoa for marcar; senão o placar vai na resposta.
+
+## Investigar o defeito
+
+A explicação inicial, do usuário ou sua, é **hipótese** até os dados reais confirmarem.
+
+- **Meça pelo uso real**: nos registros, logs ou execuções do ambiente onde o defeito acontece, conte quantos casos falham, desde quando, e compare com os que funcionam no mesmo caminho. A causa está no que separa os dois grupos.
+- **Leia o que está rodando**: compare a versão ativa nesse ambiente (publicada, implantada, configurada) com o repositório antes de concluir pelo código.
+- **Prove a origem pela execução**: a busca no código lista candidatos; o que dispara ou causa algo se confirma nos registros (horário, autor, sequência). Afirmação que cair, corrija explicitamente na resposta.
+- **Conheça o instrumento**: saiba desde quando o log ou registro existe e o que ele captura. O primeiro registro marca o início da medição, e o defeito pode ser mais antigo.
+- **Meça o alcance**: antes de propor mudar uma regra, um filtro ou um valor, veja nos dados reais quem mais depende dele. Esses são os casos que devem continuar funcionando.
+
+Pronto quando: a causa explica tanto os casos que falham quanto os que funcionam, com evidência do ambiente real, e o alcance da correção está medido.
 
 ## 1. Analisar a mudança
 
